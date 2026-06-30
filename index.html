@@ -66,7 +66,7 @@ tbody tr[data-id]:hover{background:#1f2a40;cursor:pointer}
 .ok{color:var(--green)} .ng{color:var(--red)} .muted{color:var(--muted)}
 .hint{font-size:11px;color:var(--muted);margin-top:8px}
 .empty{color:var(--muted);text-align:center;padding:30px}
-.numtbl{font-size:14.5px}.numtbl thead th{background:#13202f}.numtbl td:first-child{font-weight:700;font-size:13.5px}.numtbl tbody td{padding:12px}.numtbl tbody td:last-child{color:var(--amber);font-size:16px;font-weight:800}
+.numtbl{font-size:14.5px}.numtbl thead th{background:#13202f}.numtbl td:first-child{font-weight:700;font-size:13.5px}.numtbl tbody td{padding:12px}.numtbl tbody td:nth-child(2){color:var(--amber);font-size:16px;font-weight:800}#rankTbl th:nth-child(1),#rankTbl td:nth-child(1){position:sticky;left:0;z-index:2;min-width:50px;width:50px}#rankTbl th:nth-child(2),#rankTbl td:nth-child(2){position:sticky;left:50px;z-index:2;min-width:92px;max-width:120px;overflow:hidden;text-overflow:ellipsis}#rankTbl tbody td:nth-child(1),#rankTbl tbody td:nth-child(2){background:var(--panel)}#rankTbl thead th:nth-child(1),#rankTbl thead th:nth-child(2){z-index:4}#rankTbl tbody tr[data-id]:hover td:nth-child(1),#rankTbl tbody tr[data-id]:hover td:nth-child(2){background:#1f2a40}
 @media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.norm{grid-template-columns:1fr}.statgrid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -79,11 +79,6 @@ tbody tr[data-id]:hover{background:#1f2a40;cursor:pointer}
 <div class="wrap">
   <div class="statusbar" id="statusbar"><span class="dotc"></span><span id="statusText">&#35501;&#12415;&#36796;&#12415;&#20013;</span>
     <button class="reload" id="btnReload">&#8635; &#20877;&#35501;&#12415;&#36796;&#12415;</button></div>
-  <div class="setup" id="setupHint">
-    <b>&#21021;&#22238;&#35373;&#23450;:</b> &#12371;&#12398;&#12501;&#12449;&#12452;&#12523;&#12434;&#12486;&#12461;&#12473;&#12488;&#12456;&#12487;&#12451;&#12479;&#12391;&#38283;&#12365;&#12289;
-    <code>SHEET_CSV_URL</code>&#65288;&#12509;&#12540;&#12479;&#12523;&#65289;&#12392; <code>SUBS_CSV_URL</code>&#65288;&#12469;&#12502;&#30331;&#37682;&#65289;&#12395;&#20844;&#38283;CSV&#12398;URL&#12434;&#36028;&#12387;&#12390;&#20445;&#23384;&#12290;
-    &#26410;&#35373;&#23450;&#12398;&#38291;&#12399;&#12469;&#12531;&#12503;&#12523;&#34920;&#31034;&#12290;
-  </div>
   <div class="tabs">
     <div class="tab active" data-tab="search">&#128100; &#20491;&#20154;&#26908;&#32034;</div>
     <div class="tab" data-tab="rank">&#127942; &#12521;&#12531;&#12461;&#12531;&#12464;</div>
@@ -169,7 +164,7 @@ const $=id=>document.getElementById(id);
 const yen=n=>Math.round(n||0).toLocaleString('ja-JP');
 const oku=n=>{n=n||0;const a=n/1e8;if(Math.abs(a)>=1)return a.toFixed(a>=100?0:2)+'億';const m=n/1e4;if(Math.abs(m)>=1)return m.toFixed(0)+'万';return yen(n);};
 const pct=n=>(n==null?'-':n.toFixed(1)+'%');
-function setStatus(kind,text){const b=$('statusbar');b.className='statusbar '+kind;$('statusText').textContent=text;$('setupHint').style.display=(kind==='live')?'none':'block';}
+function setStatus(kind,text){const b=$('statusbar');b.className='statusbar '+kind;$('statusText').textContent=text;}
 function g(r,k){return r[C[k]];}
 function buildSubsMap(subsD){
   SUBSMAP={}; SUB2MAIN={};
@@ -224,12 +219,12 @@ function renderDetail(){
   const r=list[0], N=MAIN.length;
   const kpN=g(r,'kpNorm'), dN=g(r,'deathNorm');
   const kpColor=kpN>=100?'var(--green)':'var(--red)', dColor=dN>=100?'var(--green)':'var(--amber)';
-  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 撃破・戦死の内訳（1st / 2nd / 計）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数</span></h3>
+  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 撃破・戦死の内訳（計 / 1st / 2nd）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数</span></h3>
     <div class="tbl-wrap" style="max-height:none"><table class="numtbl">
-      <thead><tr><th>区分</th><th>1st</th><th>2nd</th><th>計</th></tr></thead>
+      <thead><tr><th>区分</th><th>計</th><th>1st</th><th>2nd</th></tr></thead>
       <tbody>
-        <tr><td>⚔️ 撃破ポイント</td><td>${yen(g(r,'firstKP'))}</td><td>${yen(g(r,'secondKP'))}</td><td><b>${yen(g(r,'totalKP'))}</b></td></tr>
-        <tr><td>\u{1F480} 戦死数</td><td>${yen(g(r,'firstDead'))}</td><td>${yen(g(r,'secondDead'))}</td><td><b>${yen(g(r,'totalDead'))}</b></td></tr>
+        <tr><td>⚔️ 撃破ポイント</td><td><b>${yen(g(r,'totalKP'))}</b></td><td>${yen(g(r,'firstKP'))}</td><td>${yen(g(r,'secondKP'))}</td></tr>
+        <tr><td>\u{1F480} 戦死数</td><td><b>${yen(g(r,'totalDead'))}</b></td><td>${yen(g(r,'firstDead'))}</td><td>${yen(g(r,'secondDead'))}</td></tr>
       </tbody></table></div>`;
   const subs=SUBSMAP[String(g(r,'id'))]||[];
   let subsHtml='';
