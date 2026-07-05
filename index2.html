@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KvK データポータル</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1420;--panel:#1a2233;--panel2:#222c42;--ink:#e8ecf4;--muted:#9aa6bd;--line:#2c374f;--blue:#4d8bff;--green:#36c275;--red:#ff5a6a;--amber:#ffb020;--purple:#b06bff;--teal:#22c7d6;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Roboto,"Noto Sans JP",Meiryo,sans-serif;font-size:13px}
+.topbar{background:linear-gradient(90deg,#1a2740,#2a1a40);padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.topbar h1{font-size:17px;margin:0;font-weight:700}
+.topbar .sub{font-size:12px;color:var(--muted)}
+.badge{margin-left:auto;background:#0d1626;border:1px solid var(--line);padding:4px 11px;border-radius:14px;font-size:11px;color:var(--muted)}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+.statusbar{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 14px;margin-bottom:12px;font-size:12px;color:var(--muted)}
+.statusbar .dotc{width:9px;height:9px;border-radius:50%;background:#667;flex:none}
+.statusbar.live .dotc{background:var(--green)} .statusbar.sample .dotc{background:var(--amber)} .statusbar.err .dotc{background:var(--red)}
+.statusbar .reload{margin-left:auto;border:1px solid var(--line);background:#0d1626;color:var(--blue);border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600}
+.setup{background:#2a2410;border:1px solid #5b4a16;border-radius:10px;padding:11px 15px;margin-bottom:12px;font-size:12px;line-height:1.7;color:#f0e3b8}
+.setup code{background:#0d1626;border:1px solid #5b4a16;padding:1px 5px;border-radius:4px;color:#ffd970}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:none;padding:10px 20px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--muted);cursor:pointer;font-weight:700;font-size:14px}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.page{display:none} .page.active{display:block}
+.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#3a3410;border:2px solid var(--amber);border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(255,176,32,.12)}
+.srch-label{color:var(--amber);font-weight:800;align-self:center;font-size:14px}
+.search input{flex:1;min-width:220px;padding:11px 14px;border-radius:8px;border:1px solid var(--amber);background:#1a1608;color:#fff;font-size:15px}
+.search .clr{border:1px solid var(--line);background:#0d1626;color:var(--muted);border-radius:8px;padding:9px 14px;cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+.kpi .l{font-size:11px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:800;margin-top:5px} .kpi .s{font-size:11px;color:var(--muted);margin-top:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.detail-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+.detail-head .nm{font-size:22px;font-weight:800}
+.detail-head .id{color:var(--muted);font-size:12px}
+.pill{font-size:11px;padding:2px 9px;border-radius:10px;font-weight:700}
+.pill.main{background:#10331f;color:var(--green);border:1px solid #1c6b3f}
+.norm{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px}
+.normbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px}
+.normbox .t{font-size:12px;color:var(--muted);font-weight:700}
+.normbox .big{font-size:26px;font-weight:800;margin:4px 0}
+.bar{height:12px;background:#0d1626;border-radius:7px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:7px}
+.normbox .meta{font-size:11px;color:var(--muted)}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.sb{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px}
+.sb .l{font-size:11px;color:var(--muted)} .sb .v{font-size:17px;font-weight:800;margin-top:3px}
+.sb .r{font-size:10px;color:var(--muted);margin-top:2px}
+.metricbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.mbtn{padding:9px 16px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--muted);cursor:pointer;font-weight:700}
+.mbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chart-box{position:relative;height:360px}
+.tbl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+thead th{position:sticky;top:0;background:#0d1626;color:var(--muted);text-align:right;padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:700}
+thead th:nth-child(1),thead th:nth-child(2){text-align:left}
+tbody td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+tbody td:nth-child(1),tbody td:nth-child(2){text-align:left}
+tbody tr[data-id]:hover{background:#1f2a40;cursor:pointer}
+.dirtbl thead th{cursor:pointer}
+.rk{display:inline-block;min-width:26px;text-align:center;font-weight:800;border-radius:6px;padding:1px 6px}
+.rk.g{background:#3a2f0c;color:var(--amber)}
+.ok{color:var(--green)} .ng{color:var(--red)} .muted{color:var(--muted)}
+.hint{font-size:11px;color:var(--muted);margin-top:8px}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.numtbl{font-size:14.5px}.numtbl thead th{background:#13202f}.numtbl td:first-child{font-weight:700;font-size:13.5px}.numtbl tbody td{padding:12px}.numtbl tbody td:nth-child(2){color:var(--amber);font-size:16px;font-weight:800}.stk th:nth-child(1),.stk td:nth-child(1){position:sticky;left:0;z-index:2;min-width:50px;width:50px}.stk th:nth-child(2),.stk td:nth-child(2){position:sticky;left:50px;z-index:2;min-width:92px;max-width:120px;overflow:hidden;text-overflow:ellipsis}.stk tbody td:nth-child(1),.stk tbody td:nth-child(2){background:var(--panel)}.stk thead th:nth-child(1),.stk thead th:nth-child(2){z-index:4}.stk tbody tr[data-id]:hover td:nth-child(1),.stk tbody tr[data-id]:hover td:nth-child(2){background:#1f2a40}
+@media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.norm{grid-template-columns:1fr}.statgrid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>&#9876;&#65039; 2062 KVK20 オルレアン包囲</h1>
+  <span class="sub">&#36043;&#29486;&#24230;&#12539;&#12494;&#12523;&#12510;&#12539;&#12521;&#12531;&#12461;&#12531;&#12464;&#12539;&#12469;&#12502;&#31649;&#29702;</span>
+  <span class="badge" id="recBadge">&#8212;</span>
+</div>
+<div class="wrap">
+  <div class="statusbar" id="statusbar"><span class="dotc"></span><span id="statusText">&#35501;&#12415;&#36796;&#12415;&#20013;</span>
+    <button class="reload" id="btnReload">&#8635; &#20877;&#35501;&#12415;&#36796;&#12415;</button></div>
+  <div class="tabs">
+    <div class="tab active" data-tab="search">&#128100; 個人検索</div>
+    <div class="tab" data-tab="rank">&#127942; 王国ランキング</div>
+    <div class="tab" data-tab="camp">&#127760; 陣営ランキング</div>
+  </div>
+  <div class="page active" id="page-search">
+    <div class="search">
+      <span class="srch-label">&#128269; ID / &#21517;&#21069;&#12391;&#26908;&#32034;</span>
+      <input id="q" placeholder="&#32207;&#30563;ID / &#21517;&#21069;&#12391;&#26908;&#32034;&#65288;&#20363;: 48275800 / glonige&#65289;">
+      <button class="clr" id="qClr">&#12463;&#12522;&#12450;</button>
+    </div>
+    <div id="detail"></div>
+    <div class="card">
+      <h3>&#128199; &#12513;&#12531;&#12496;&#12540;&#19968;&#35239;&#65288;&#12513;&#12452;&#12531;&#12398;&#12415;&#12539;&#12463;&#12522;&#12483;&#12463;&#12391;&#35443;&#32048;&#65289;</h3>
+      <div class="tbl-wrap"><table id="dir" class="dirtbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+  <div class="page" id="page-rank">
+    <div class="kpis" id="kpis"></div>
+    <div class="metricbtns" id="scopebtns"></div>
+    <div class="metricbtns" id="metricbtns"></div>
+    <div class="card">
+      <h3 id="rankTitle">&#12521;&#12531;&#12461;&#12531;&#12464;</h3>
+      <div class="chart-box"><canvas id="cRank"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>&#128203; &#12521;&#12531;&#12461;&#12531;&#12464;&#34920; <span class="muted" id="rankCount" style="font-weight:400"></span></h3>
+      <div class="tbl-wrap"><table id="rankTbl" class="stk"><thead></thead><tbody></tbody></table></div>
+      <div class="hint" id="rankHint"></div>
+    </div>
+  </div>
+  <div class="page" id="page-camp">
+    <div class="metricbtns" id="campperiod"></div>
+    <div class="metricbtns" id="campscope"></div>
+    <div class="metricbtns" id="campmetric"></div>
+    <div id="campDetail"></div>
+    <div class="card">
+      <h3 id="campTitle">陣営ランキング</h3>
+      <div class="chart-box"><canvas id="cCamp"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>&#128203; 陣営ランキング表 <span class="muted" id="campCount" style="font-weight:400"></span></h3>
+      <div class="tbl-wrap"><table id="campTbl" class="stk"><thead></thead><tbody></tbody></table></div>
+      <div class="hint" id="campHint"></div>
+    </div>
+  </div>
+  <div class="hint" style="text-align:center">「再読み込み」で最新化。</div>
+</div>
+<script>
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3-zya9HX-njw0C6syYJNFytWBJEnQDAVDymXjHycdEQ3d73gCg_j4vnz_wvgnd1YlHyxxl2pU1vTh/pub?gid=809215842&single=true&output=csv";
+const SUBS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR3-zya9HX-njw0C6syYJNFytWBJEnQDAVDymXjHycdEQ3d73gCg_j4vnz_wvgnd1YlHyxxl2pU1vTh/pub?gid=1904445016&single=true&output=csv";
+const CAMP_COMBINED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=563590891&single=true&output=csv";   // ★「統合」シートの公開CSV URL（王国=R列 / 期間=S列）。王国リストは自動取得
+const RAW_DAILY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=1437104797&single=true&output=csv";   // ★「生データ」シートの公開CSV URL（王国,日付,ID,名前,戦力,撃破P,T5..T1戦死）→ 個人の日次推移グラフ。未設定ならデモ生成
+const CAMP_FALLBACK = [{"id":"68439346","name":"しましろう","power":106987641,"kp":33700840,"dead":2041667,"deadT5":1225000,"deadT4":816667,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"68439346","name":"しましろう","power":106987641,"kp":13480336,"dead":816666,"deadT5":489999,"deadT4":326667,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"68439346","name":"しましろう","power":106987641,"kp":20220504,"dead":1225000,"deadT5":735000,"deadT4":490000,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"48275800","name":"ʸˢglonige Æ","power":102648568,"kp":29881320,"dead":1836227,"deadT5":1101736,"deadT4":734491,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"48275800","name":"ʸˢglonige Æ","power":102648568,"kp":11952528,"dead":734490,"deadT5":440694,"deadT4":293796,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"48275800","name":"ʸˢglonige Æ","power":102648568,"kp":17928792,"dead":1101736,"deadT5":661041,"deadT4":440695,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"45172788","name":"紅ᶜ虎tärö","power":134794900,"kp":26757569,"dead":1787194,"deadT5":1072316,"deadT4":714878,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"45172788","name":"紅ᶜ虎tärö","power":134794900,"kp":10703027,"dead":714877,"deadT5":428926,"deadT4":285951,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"45172788","name":"紅ᶜ虎tärö","power":134794900,"kp":16054541,"dead":1072316,"deadT5":643389,"deadT4":428927,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"138315117","name":"yaki180sx","power":145118595,"kp":24340660,"dead":1700761,"deadT5":1020456,"deadT4":680305,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"138315117","name":"yaki180sx","power":145118595,"kp":9736264,"dead":680304,"deadT5":408182,"deadT4":272122,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"138315117","name":"yaki180sx","power":145118595,"kp":14604396,"dead":1020456,"deadT5":612273,"deadT4":408183,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"62121593","name":"ᴾʳItsukiちゃま","power":117126320,"kp":24090706,"dead":1594956,"deadT5":956973,"deadT4":637983,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"62121593","name":"ᴾʳItsukiちゃま","power":117126320,"kp":9636282,"dead":637982,"deadT5":382789,"deadT4":255193,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"62121593","name":"ᴾʳItsukiちゃま","power":117126320,"kp":14454423,"dead":956973,"deadT5":574183,"deadT4":382790,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"21659280","name":"ʚ fibpipi ɞ","power":123509619,"kp":23420360,"dead":1582716,"deadT5":949629,"deadT4":633087,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"21659280","name":"ʚ fibpipi ɞ","power":123509619,"kp":9368144,"dead":633086,"deadT5":379851,"deadT4":253235,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"21659280","name":"ʚ fibpipi ɞ","power":123509619,"kp":14052216,"dead":949629,"deadT5":569777,"deadT4":379852,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"81057748","name":"Ishi ちゃま","power":99630740,"kp":22355460,"dead":5099,"deadT5":3059,"deadT4":2040,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"81057748","name":"Ishi ちゃま","power":99630740,"kp":8942184,"dead":2039,"deadT5":1223,"deadT4":816,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"81057748","name":"Ishi ちゃま","power":99630740,"kp":13413276,"dead":3059,"deadT5":1835,"deadT4":1224,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"53608410","name":"BÖN","power":89947801,"kp":19660060,"dead":1282829,"deadT5":769697,"deadT4":513132,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"53608410","name":"BÖN","power":89947801,"kp":7864024,"dead":513131,"deadT5":307878,"deadT4":205253,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"53608410","name":"BÖN","power":89947801,"kp":11796036,"dead":769697,"deadT5":461818,"deadT4":307879,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"64288854","name":"紅ˣ Marumiちゃま","power":91437015,"kp":19211050,"dead":31352,"deadT5":18811,"deadT4":12541,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"64288854","name":"紅ˣ Marumiちゃま","power":91437015,"kp":7684420,"dead":12540,"deadT5":7524,"deadT4":5016,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"64288854","name":"紅ˣ Marumiちゃま","power":91437015,"kp":11526630,"dead":18811,"deadT5":11286,"deadT4":7525,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"43594774","name":"紅ˣ ぺじぃ","power":98143508,"kp":17413270,"dead":1197808,"deadT5":718684,"deadT4":479124,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"43594774","name":"紅ˣ ぺじぃ","power":98143508,"kp":6965308,"dead":479123,"deadT5":287473,"deadT4":191650,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"43594774","name":"紅ˣ ぺじぃ","power":98143508,"kp":10447962,"dead":718684,"deadT5":431210,"deadT4":287474,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"80392008","name":"AltCtrlDlt","power":68060572,"kp":1768209,"dead":73880,"deadT5":44328,"deadT4":29552,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"80392008","name":"AltCtrlDlt","power":68060572,"kp":707283,"dead":29552,"deadT5":17731,"deadT4":11821,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"80392008","name":"AltCtrlDlt","power":68060572,"kp":1060925,"dead":44328,"deadT5":26596,"deadT4":17732,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"61714704","name":"ʚ fibril ɞ","power":81561476,"kp":1693020,"dead":356522,"deadT5":213913,"deadT4":142609,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"61714704","name":"ʚ fibril ɞ","power":81561476,"kp":677208,"dead":142608,"deadT5":85564,"deadT4":57044,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"61714704","name":"ʚ fibril ɞ","power":81561476,"kp":1015812,"dead":213913,"deadT5":128347,"deadT4":85566,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"102772448","name":"しまじろうさぶ","power":39348321,"kp":1245080,"dead":19524,"deadT5":11714,"deadT4":7810,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"102772448","name":"しまじろうさぶ","power":39348321,"kp":498032,"dead":7809,"deadT5":4685,"deadT4":3124,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"102772448","name":"しまじろうさぶ","power":39348321,"kp":747048,"dead":11714,"deadT5":7028,"deadT4":4686,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"46044173","name":"ʸˢglosta Æ","power":72588357,"kp":1137100,"dead":298816,"deadT5":179289,"deadT4":119527,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"46044173","name":"ʸˢglosta Æ","power":72588357,"kp":454840,"dead":119526,"deadT5":71715,"deadT4":47811,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"46044173","name":"ʸˢglosta Æ","power":72588357,"kp":682260,"dead":179289,"deadT5":107573,"deadT4":71716,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"143974619","name":"yaki鳥","power":28236208,"kp":1023640,"dead":43700,"deadT5":26220,"deadT4":17480,"kingdom":"自国 2062(サンプル)","period":"全期間"},{"id":"143974619","name":"yaki鳥","power":28236208,"kp":409456,"dead":17480,"deadT5":10488,"deadT4":6992,"kingdom":"自国 2062(サンプル)","period":"1st"},{"id":"143974619","name":"yaki鳥","power":28236208,"kp":614184,"dead":26220,"deadT5":15732,"deadT4":10488,"kingdom":"自国 2062(サンプル)","period":"2nd"},{"id":"70439346","name":"しましろう","power":71759258,"kp":22603987,"dead":997249,"deadT5":598349,"deadT4":398900,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"70439346","name":"しましろう","power":71759258,"kp":9041594,"dead":398899,"deadT5":239339,"deadT4":159560,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"70439346","name":"しましろう","power":71759258,"kp":13562392,"dead":598349,"deadT5":359009,"deadT4":239340,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"50275801","name":"ʸˢglonige Æ","power":60858501,"kp":17716100,"dead":728039,"deadT5":436823,"deadT4":291216,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"50275801","name":"ʸˢglonige Æ","power":60858501,"kp":7086440,"dead":291215,"deadT5":174729,"deadT4":116486,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"50275801","name":"ʸˢglonige Æ","power":60858501,"kp":10629660,"dead":436823,"deadT5":262093,"deadT4":174730,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"47172790","name":"紅ᶜ虎tärö","power":110251513,"kp":21885564,"dead":1262537,"deadT5":757522,"deadT4":505015,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"47172790","name":"紅ᶜ虎tärö","power":110251513,"kp":8754225,"dead":505014,"deadT5":303008,"deadT4":202006,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"47172790","name":"紅ᶜ虎tärö","power":110251513,"kp":13131338,"dead":757522,"deadT5":454513,"deadT4":303009,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"140315120","name":"yaki180sx","power":80917595,"kp":13572262,"dead":648117,"deadT5":388870,"deadT4":259247,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"140315120","name":"yaki180sx","power":80917595,"kp":5428904,"dead":259246,"deadT5":155547,"deadT4":103699,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"140315120","name":"yaki180sx","power":80917595,"kp":8143357,"dead":388870,"deadT5":233322,"deadT4":155548,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"64121597","name":"ᴾʳItsukiちゃま","power":89735967,"kp":18457019,"dead":1006159,"deadT5":603695,"deadT4":402464,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"64121597","name":"ᴾʳItsukiちゃま","power":89735967,"kp":7382807,"dead":402463,"deadT5":241477,"deadT4":160986,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"64121597","name":"ᴾʳItsukiちゃま","power":89735967,"kp":11074211,"dead":603695,"deadT5":362217,"deadT4":241478,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"23659285","name":"ʚ fibpipi ɞ","power":85167294,"kp":16149743,"dead":840701,"deadT5":504420,"deadT4":336281,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"23659285","name":"ʚ fibpipi ɞ","power":85167294,"kp":6459897,"dead":336280,"deadT5":201768,"deadT4":134512,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"23659285","name":"ʚ fibpipi ɞ","power":85167294,"kp":9689845,"dead":504420,"deadT5":302652,"deadT4":201768,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"83057754","name":"Ishi ちゃま","power":54906452,"kp":12320083,"dead":2810,"deadT5":1686,"deadT4":1124,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"83057754","name":"Ishi ちゃま","power":54906452,"kp":4928033,"dead":1124,"deadT5":674,"deadT4":450,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"83057754","name":"Ishi ちゃま","power":54906452,"kp":7392049,"dead":1686,"deadT5":1011,"deadT4":675,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"55608417","name":"BÖN","power":67761823,"kp":14810829,"dead":783756,"deadT5":470253,"deadT4":313503,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"55608417","name":"BÖN","power":67761823,"kp":5924331,"dead":313502,"deadT5":188101,"deadT4":125401,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"55608417","name":"BÖN","power":67761823,"kp":8886497,"dead":470253,"deadT5":282151,"deadT4":188102,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"66288862","name":"紅ˣ Marumiちゃま","power":49547253,"kp":10409950,"dead":16988,"deadT5":10192,"deadT4":6796,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"66288862","name":"紅ˣ Marumiちゃま","power":49547253,"kp":4163980,"dead":6795,"deadT5":4077,"deadT4":2718,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"66288862","name":"紅ˣ Marumiちゃま","power":49547253,"kp":6245970,"dead":10192,"deadT5":6115,"deadT4":4077,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"45594783","name":"紅ˣ ぺじぃ","power":70677120,"kp":12540001,"dead":687118,"deadT5":412270,"deadT4":274848,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"45594783","name":"紅ˣ ぺじぃ","power":70677120,"kp":5016000,"dead":274847,"deadT5":164908,"deadT4":109939,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"45594783","name":"紅ˣ ぺじぃ","power":70677120,"kp":7524000,"dead":412270,"deadT5":247362,"deadT4":164908,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"82392018","name":"AltCtrlDlt","power":37871280,"kp":983893,"dead":41109,"deadT5":24665,"deadT4":16444,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"82392018","name":"AltCtrlDlt","power":37871280,"kp":393557,"dead":16443,"deadT5":9865,"deadT4":6578,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"82392018","name":"AltCtrlDlt","power":37871280,"kp":590335,"dead":24665,"deadT5":14799,"deadT4":9866,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"63714715","name":"ʚ fibril ɞ","power":46149184,"kp":957946,"dead":180931,"deadT5":108558,"deadT4":72373,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"63714715","name":"ʚ fibril ɞ","power":46149184,"kp":383178,"dead":72372,"deadT5":43423,"deadT4":28949,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"63714715","name":"ʚ fibril ɞ","power":46149184,"kp":574767,"dead":108558,"deadT5":65134,"deadT4":43424,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"104772460","name":"しまじろうさぶ","power":28174721,"kp":891519,"dead":13979,"deadT5":8387,"deadT4":5592,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"104772460","name":"しまじろうさぶ","power":28174721,"kp":356607,"dead":5591,"deadT5":3354,"deadT4":2237,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"104772460","name":"しまじろうさぶ","power":28174721,"kp":534911,"dead":8387,"deadT5":5032,"deadT4":3355,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"48044186","name":"ʸˢglosta Æ","power":65117814,"kp":1020073,"dead":262813,"deadT5":157687,"deadT4":105126,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"48044186","name":"ʸˢglosta Æ","power":65117814,"kp":408029,"dead":105125,"deadT5":63075,"deadT4":42050,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"48044186","name":"ʸˢglosta Æ","power":65117814,"kp":612043,"dead":157687,"deadT5":94612,"deadT4":63075,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"145974633","name":"yaki鳥","power":16397073,"kp":594438,"dead":25377,"deadT5":15226,"deadT4":10151,"kingdom":"他国2(サンプル)","period":"全期間"},{"id":"145974633","name":"yaki鳥","power":16397073,"kp":237775,"dead":10150,"deadT5":6090,"deadT4":4060,"kingdom":"他国2(サンプル)","period":"1st"},{"id":"145974633","name":"yaki鳥","power":16397073,"kp":356662,"dead":15226,"deadT5":9135,"deadT4":6091,"kingdom":"他国2(サンプル)","period":"2nd"},{"id":"71439346","name":"しましろう","power":102604880,"kp":32320281,"dead":1891829,"deadT5":1135097,"deadT4":756732,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"71439346","name":"しましろう","power":102604880,"kp":12928112,"dead":756731,"deadT5":454038,"deadT4":302693,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"71439346","name":"しましろう","power":102604880,"kp":19392168,"dead":1135097,"deadT5":681058,"deadT4":454039,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"51275801","name":"ʸˢglonige Æ","power":127071631,"kp":36990950,"dead":2713179,"deadT5":1627907,"deadT4":1085272,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"51275801","name":"ʸˢglonige Æ","power":127071631,"kp":14796380,"dead":1085271,"deadT5":651162,"deadT4":434109,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"51275801","name":"ʸˢglonige Æ","power":127071631,"kp":22194570,"dead":1627907,"deadT5":976744,"deadT4":651163,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"48172790","name":"紅ᶜ虎tärö","power":196654863,"kp":39037130,"dead":3503115,"deadT5":2101869,"deadT4":1401246,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"48172790","name":"紅ᶜ虎tärö","power":196654863,"kp":15614852,"dead":1401246,"deadT5":840747,"deadT4":560499,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"48172790","name":"紅ᶜ虎tärö","power":196654863,"kp":23422278,"dead":2101869,"deadT5":1261121,"deadT4":840748,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"141315120","name":"yaki180sx","power":174606843,"kp":29286707,"dead":2343912,"deadT5":1406347,"deadT4":937565,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"141315120","name":"yaki180sx","power":174606843,"kp":11714682,"dead":937564,"deadT5":562538,"deadT4":375026,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"141315120","name":"yaki180sx","power":174606843,"kp":17572024,"dead":1406347,"deadT5":843808,"deadT4":562539,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"65121597","name":"ᴾʳItsukiちゃま","power":126345277,"kp":25986874,"dead":1822764,"deadT5":1093658,"deadT4":729106,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"65121597","name":"ᴾʳItsukiちゃま","power":126345277,"kp":10394749,"dead":729105,"deadT5":437463,"deadT4":291642,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"65121597","name":"ᴾʳItsukiちゃま","power":126345277,"kp":15592124,"dead":1093658,"deadT5":656194,"deadT4":437464,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"24659285","name":"ʚ fibpipi ɞ","power":182623301,"kp":34629719,"dead":3168946,"deadT5":1901367,"deadT4":1267579,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"24659285","name":"ʚ fibpipi ɞ","power":182623301,"kp":13851887,"dead":1267578,"deadT5":760546,"deadT4":507032,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"24659285","name":"ʚ fibpipi ɞ","power":182623301,"kp":20777831,"dead":1901367,"deadT5":1140820,"deadT4":760547,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"84057754","name":"Ishi ちゃま","power":83405081,"kp":18714695,"dead":4268,"deadT5":2560,"deadT4":1708,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"84057754","name":"Ishi ちゃま","power":83405081,"kp":7485878,"dead":1707,"deadT5":1024,"deadT4":683,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"84057754","name":"Ishi ちゃま","power":83405081,"kp":11228817,"dead":2560,"deadT5":1536,"deadT4":1024,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"56608417","name":"BÖN","power":125687951,"kp":27471851,"dead":2338339,"deadT5":1403003,"deadT4":935336,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"56608417","name":"BÖN","power":125687951,"kp":10988740,"dead":935335,"deadT5":561201,"deadT4":374134,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"56608417","name":"BÖN","power":125687951,"kp":16483110,"dead":1403003,"deadT5":841801,"deadT4":561202,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"67288862","name":"紅ˣ Marumiちゃま","power":91878693,"kp":19303847,"dead":31503,"deadT5":18901,"deadT4":12602,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"67288862","name":"紅ˣ Marumiちゃま","power":91878693,"kp":7721538,"dead":12601,"deadT5":7560,"deadT4":5041,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"67288862","name":"紅ˣ Marumiちゃま","power":91878693,"kp":11582308,"dead":18901,"deadT5":11340,"deadT4":7561,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"46594783","name":"紅ˣ ぺじぃ","power":88774336,"kp":15750929,"dead":1008278,"deadT5":604966,"deadT4":403312,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"46594783","name":"紅ˣ ぺじぃ","power":88774336,"kp":6300371,"dead":403311,"deadT5":241986,"deadT4":161325,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"46594783","name":"紅ˣ ぺじぃ","power":88774336,"kp":9450557,"dead":604966,"deadT5":362979,"deadT4":241987,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"83392018","name":"AltCtrlDlt","power":60320495,"kp":1567122,"dead":65478,"deadT5":39286,"deadT4":26192,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"83392018","name":"AltCtrlDlt","power":60320495,"kp":626848,"dead":26191,"deadT5":15714,"deadT4":10477,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"83392018","name":"AltCtrlDlt","power":60320495,"kp":940273,"dead":39286,"deadT5":23571,"deadT4":15715,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"64714715","name":"ʚ fibril ɞ","power":83017548,"kp":1723244,"dead":364424,"deadT5":218654,"deadT4":145770,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"64714715","name":"ʚ fibril ɞ","power":83017548,"kp":689297,"dead":145769,"deadT5":87461,"deadT4":58308,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"64714715","name":"ʚ fibril ɞ","power":83017548,"kp":1033946,"dead":218654,"deadT5":131192,"deadT4":87462,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"105772460","name":"しまじろうさぶ","power":53833507,"kp":1703427,"dead":26711,"deadT5":16026,"deadT4":10685,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"105772460","name":"しまじろうさぶ","power":53833507,"kp":681370,"dead":10684,"deadT5":6410,"deadT4":4274,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"105772460","name":"しまじろうさぶ","power":53833507,"kp":1022056,"dead":16026,"deadT5":9615,"deadT4":6411,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"49044186","name":"ʸˢglosta Æ","power":67485482,"kp":1057163,"dead":274093,"deadT5":164455,"deadT4":109638,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"49044186","name":"ʸˢglosta Æ","power":67485482,"kp":422865,"dead":109637,"deadT5":65782,"deadT4":43855,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"49044186","name":"ʸˢglosta Æ","power":67485482,"kp":634297,"dead":164455,"deadT5":98673,"deadT4":65782,"kingdom":"他国3(サンプル)","period":"2nd"},{"id":"146974633","name":"yaki鳥","power":34061453,"kp":1234821,"dead":52715,"deadT5":31629,"deadT4":21086,"kingdom":"他国3(サンプル)","period":"全期間"},{"id":"146974633","name":"yaki鳥","power":34061453,"kp":493928,"dead":21086,"deadT5":12651,"deadT4":8435,"kingdom":"他国3(サンプル)","period":"1st"},{"id":"146974633","name":"yaki鳥","power":34061453,"kp":740892,"dead":31629,"deadT5":18977,"deadT4":12652,"kingdom":"他国3(サンプル)","period":"2nd"}];
+const FALLBACK = {"cols":["id","name","targetKPinc","targetDeathCnt","startPower","startKP","startDead","targetKP","targetDeath","firstKP","firstKPrank","firstDead","firstDeadRank","secondKP","secondKPrank","secondDead","secondDeadRank","totalKP","totalDead","totalDeadT4","totalDeadT5","kpRank","deadRank","contribRank","contribPoint","kpNorm","deathNorm","powerCap","sub"],"rows":[["92030923","ぱんだ Panda",300000000,0,141200779,3489116935,20642316,3789116935,20642316,90895390,28,368714,38,212697370,32,986864,49,303592760,1355578,0,1355578,31,54,30,233131060,101.2,0.0,0,"No"],["138315117","yaki180sx",300000000,0,141485949,6268826969,15745917,6568826969,15745917,181959726,11,160969,64,426833249,11,1055372,44,608792975,1216341,0,1216341,9,59,15,377541128,202.93,0.0,0,"No"],["86437914","火将あおくま",300000000,0,139847327,12143335966,40876644,12443335966,40876644,262054314,5,530982,20,335423745,14,1395727,30,597478059,1926709,956,1925753,10,20,12,414312890,199.16,0.0,0,"No"],["45172788","紅ᶜ虎tärö",300000000,0,136992552,13186892704,44300109,13486892704,44300109,191724382,9,55450,83,501373344,6,2230490,10,693097726,2285940,355044,1930896,5,12,8,489683483,231.03,0.0,0,"No"],["44475668","キセル Æ",300000000,0,135933463,13246283855,66894530,13546283855,66894530,89311076,29,38201,89,133844510,44,147141,118,223155586,185342,0,185341,40,123,56,122698253,74.39,0.0,135933463,"No"],["62121593","ᴾʳItsukiちゃま",300000000,0,124819802,8546588421,55689841,8846588421,55689841,197932168,8,547266,19,457391037,9,2473196,6,655323205,3020462,20541,2999437,6,7,5,508244053,218.44,0.0,0,"No"],["69286615","ë火渡丞ë",300000000,0,121388310,8460470406,45406449,8760470406,45406449,0,126,0,104,0,151,0,140,0,0,0,0,160,145,160,0,0.0,0.0,121388310,"No"],["71756387","Matty022",300000000,0,118787412,13445047604,27260151,13745047604,27260151,12536130,66,0,104,90034518,55,61934,132,102570648,61934,0,61934,59,136,90,55001364,34.19,0.0,118787412,"No"],["21659280","ʚ fibpipi ɞ",300000000,0,116826787,6925366155,35536550,7225366155,35536550,292554841,4,369740,36,332045633,15,644651,75,624600474,1014391,0,1014391,8,66,11,426181397,208.2,0.0,0,"No"],["86462900","HIZAKURA",300000000,0,114247911,10063905884,24065367,10363905884,24065367,230441248,6,345551,41,339095408,13,863016,58,569536656,1208567,0,1208567,15,60,7,490807008,189.85,0.0,0,"No"],["43458429","紅x雪坊主",300000000,0,114789447,11127710475,34299196,11427710475,34299196,151350538,12,937580,10,303719994,20,398393,95,455070532,1335973,11548,1324425,16,55,9,484182346,151.69,0.0,0,"No"],["44393932","鬼silverbackÆ",300000000,0,111904963,3969565053,39602109,4269565053,39602109,58222050,39,156730,67,319772921,16,843747,62,377994971,1000477,0,1000477,22,71,22,284508526,126.0,0.0,0,"No"],["57960264","Æ閻魔Rimuru",300000000,0,106911511,9455436800,32619359,9755436800,32619359,133652261,14,26793,94,447601441,10,5365402,1,581253702,5392195,1114755,4233306,12,1,4,578067861,193.75,0.0,0,"No"],["68439346","しましろう",300000000,0,106792787,14658039569,46506744,14958039569,46506744,664922420,1,394596,33,1098379449,1,1618637,19,1763301869,2013233,3884,1862097,1,18,1,1001313675,587.77,0.0,0,"No"],["102273075","紅ˣ村西サブ",0,0,40858484,26973160,144292298,26973160,144292298,85350,118,9963,100,2078990,131,50901,133,2164340,60864,56765,0,132,137,139,2785120,0.0,0.0,0,"Yes"],["77122775","mini Noko2",0,0,40728888,137079504,9210041,137079504,9210041,2488860,94,191994,57,21511866,85,784322,66,24000726,976316,976316,0,87,72,103,41289843,0.0,0.0,0,"Yes"],["123040718","chamagoma",0,0,40573115,32803359,4787185,32803359,4787185,0,126,0,104,6348420,114,3214300,5,6348420,3214300,2852293,0,119,6,68,88743000,0.0,0.0,0,"Yes"],["70697700","MIZUKAZEサブ3",0,0,40280597,67242409,4640982,67242409,4640982,0,126,0,104,0,151,0,140,0,0,0,0,160,145,160,0,0.0,0.0,0,"Yes"],["54245064","TK 島二郎",0,0,40160833,75551601,7568844,75551601,7568844,0,126,0,104,0,151,0,140,0,0,0,0,160,145,160,0,0.0,0.0,0,"Yes"],["96103745","MIZUKAZEサブ1",0,0,37254120,49296924,1704019,49296924,1704019,0,126,0,104,0,151,0,140,0,0,0,0,160,145,160,0,0.0,0.0,0,"Yes"],["48275800","ʸˢglonige Æ",300000000,0,103174160,11417210849,32402322,11717210849,32402322,384958288,3,225911,54,839468474,2,1504837,23,1224426762,1730748,0,1730341,2,33,2,744607641,408.14,0.0,0,"No"]]};
+const SUBS_FALLBACK = {"cols":["subId","subName","mainId"],"rows":[["25591989","ʚExɞfibpipi","21659280"],["61714704","ʚ fibril ɞ","21659280"],["67994239","舎弟etc","21659280"],["152429896","ʚ淡ɞふぃぶりる","21659280"],["160783536","fibrilAnother","21659280"],["161142706","ʚ麗ɞふぃぶりる","21659280"],["162098085","舎弟5","21659280"],["163675607","舎弟1","21659280"],["163903712","舎弟4","21659280"],["53551729","紅ᴶᶜ虎Æ","45172788"],["50736590","虎太郎sub","45172788"],["52331729","紅ᴶᶜ虎Æ","45172788"],["91429576","寅ジローÆ","45172788"],["70987081","鬼烈火","44393932"],["57958857","閻魔の愛犬","57960264"],["71413959","DBひわさぶ","69286615"],["82780911","Micro Matty","71756387"],["61781906","牛Matty","71756387"],["103422910","生ハムMatty","71756387"],["71914362","獅子Matty","71756387"],["82834499","鴎Matty","71756387"],["92094189","鷲Matty","71756387"],["73937903","巨Matty","71756387"],["85761312","星Matty","71756387"],["85912332","燕Matty","71756387"],["73891951","虎Matty","71756387"],["102016041","鷹Matty","71756387"],["80686546","竜Matty","71756387"],["70101704","ペコMatty","71756387"],["196132798","風呂Matty","71756387"],["196133166","仁義なきMatty","71756387"],["146070905","火将ジャンヌ","86437914"],["87413138","ロマークエオルシア","86437914"],["86083318","火将アジルス","86437914"],["131492507","火将サブにゃん","86437914"],["92484004","ʚ雪ɞ ひざくら","86462900"],["99467246","ʚ樹ɞ ひざくら","86462900"],["99546342","ʚ朧ɞ ひざくら","86462900"],["138333458","ʚ凛ɞ ひざくら","86462900"],["139414773","ʚ桜ɞカクカクシカジカ","86462900"],["146182602","ʚ螢ɞ ひざくら","86462900"],["88365101","ʚ水ɞ ひざくら","86462900"],["138982499","ʚ亞ɞ ひざくら","86462900"],["45719095","小雪坊主","43458429"],["75803233","大雪坊主","43458429"],["99013110","雪うさ","43458429"],["100516001","粉雪坊主","43458429"],["95130509","雪猫児","43458429"],["123724471","雪たぬき","43458429"],["142530311","雪きつね","43458429"],["157094026","雪しば","43458429"],["156039937","雪ねず","43458429"],["156040021","雪坊主","43458429"],["157094667","雪くろしば","43458429"],["155648175","雪ひつじ","43458429"],["102772448","しまじろうさぶ","68439346"],["160982756","しまじろうの相方","68439346"],["156404385","しまじろうの奴隷","68439346"],["157001819","しまじろうの心の友","68439346"],["176206507","しまじろーう","68439346"],["136507735","しまじろう3","68439346"],["184088351","しまじろうの下僕","68439346"],["178404308","しまずろう","68439346"],["93199520","ねこ Panda","92030923"],["109817830","うさぎPanda","92030923"],["105653576","黒猫のPanda","92030923"],["134264588","ピピスケ","92030923"],["133466092","ピスケー","92030923"],["153820920","ペンギンちゃん","92030923"],["130674552","ペンギンチャン","92030923"],["166104332","ぴースケ","92030923"],["102014852","ペンギンズ","92030923"],["167503725","ぴぃすけ","92030923"],["143974619","yaki鳥","138315117"],["162123053","yaki魚","138315117"],["162580165","yaki肉","138315117"],["163566397","yaki豆腐","138315117"],["163566692","yakiうどん","138315117"],["176419734","yaki飯","138315117"],["176420068","yaki餅","138315117"],["178653028","yaki芋","138315117"],["178653754","yaki茄子","138315117"],["61504593","ᴾʳ Princeちゃま","62121593"]]};
+const COLS=['id','name','targetKPinc','targetDeathCnt','startPower','startKP','startDead','targetKP','targetDeath','firstKP','firstKPrank','firstDead','firstDeadRank','secondKP','secondKPrank','secondDead','secondDeadRank','totalKP','totalDead','totalDeadT4','totalDeadT5','kpRank','deadRank','contribRank','contribPoint','kpNorm','deathNorm','powerCap','sub'];
+const IX={id:0,name:1,targetKPinc:2,targetDeathCnt:3,startPower:4,startKP:5,startDead:6,targetKP:7,targetDeath:8,firstKP:9,firstKPrank:10,firstDead:11,firstDeadRank:12,secondKP:15,secondKPrank:16,secondDead:17,secondDeadRank:18,totalKP:21,totalDead:22,totalDeadT4:23,totalDeadT5:24,kpRank:25,deadRank:26,contribRank:29,contribPoint:30,kpNorm:31,deathNorm:32,powerCap:38,sub:43};
+const RANKK=new Set(['firstKPrank','firstDeadRank','secondKPrank','secondDeadRank','kpRank','deadRank','contribRank']);
+const STRK=new Set(['id','name','sub']);
+function parseCSV(text){
+  const rows=[]; let f='',row=[],q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else { if(c==='"')q=true; else if(c===','){row.push(f);f='';}
+      else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}
+      else if(c==='\r'){} else f+=c; } }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function conv(key,v){
+  v=(v==null?'':String(v));
+  if(STRK.has(key)) return v.trim();
+  const t=v.replace(/,/g,'').replace('%','').trim();
+  const n=Number(t);
+  if(RANKK.has(key)) return (t===''||t==='-'||!isFinite(n))?null:n;
+  if(!isFinite(n)) return 0;
+  return n;
+}
+function csvToData(text){
+  const arr=parseCSV(text), recs=[];
+  for(const r of arr){
+    if(!r || !/^\d{4,}$/.test(String(r[0]||'').trim())) continue;
+    recs.push(COLS.map(k=>conv(k, r[IX[k]])));
+  }
+  if(!recs.length) throw new Error('no rows');
+  return {cols:COLS, rows:recs};
+}
+function subsToData(text){
+  const arr=parseCSV(text), rows=[];
+  for(const r of arr){
+    const sid=String(r[0]||'').trim(), mid=String(r[2]||'').trim();
+    if(!/^\d{4,}$/.test(sid) || !/^\d{4,}$/.test(mid)) continue;
+    rows.push([sid, String(r[1]||'').trim(), mid]);
+  }
+  return {cols:['subId','subName','mainId'], rows};
+}
+function rawToData(text){
+  const arr=parseCSV(text), out=[];
+  for(const r of arr){
+    const id=String(r[0]||'').trim();
+    if(!/^\d{4,}$/.test(id)) continue;
+    const num=x=>Number(String(x==null?'':x).replace(/,/g,''))||0;
+    const dead=num(r[4])+num(r[5])+num(r[6])+num(r[7])+num(r[8]);
+    out.push({id, name:String(r[1]||'').trim(), power:num(r[2]), kp:num(r[9]), dead, deadT5:num(r[4]), deadT4:num(r[5]), kingdom:String(r[17]||'').trim(), period:String(r[18]||'').trim()});
+  }
+  return out;
+}
+function dailyToData(text){
+  const arr=parseCSV(text), out=[];
+  for(const r of arr){
+    const id=String(r[2]||'').trim();
+    if(!/^\d{4,}$/.test(id)) continue;
+    const num=x=>Number(String(x==null?'':x).replace(/,/g,''))||0;
+    const dead=num(r[6])+num(r[7])+num(r[8])+num(r[9])+num(r[10]);
+    out.push({kingdom:String(r[0]||'').trim(), date:String(r[1]||'').trim(), id, name:String(r[3]||'').trim(), power:num(r[4]), kp:num(r[5]), dead});
+  }
+  return out;
+}
+function makeDemoDaily(r){
+  const tot=g(r,'totalKP')||0, td=g(r,'totalDead')||0, days=10, start=new Date(2026,6,12);
+  const seed=(+String(g(r,'id')).replace(/\D/g,'')%7)/10, w=[]; let sw=0;
+  for(let i=0;i<days;i++){const x=Math.abs(Math.sin((i+1)*(1+seed)))+0.15; w.push(x); sw+=x;}
+  const out=[];
+  for(let i=0;i<days;i++){const d=new Date(start); d.setDate(start.getDate()+i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    out.push({date:ds, kp:Math.round(tot*w[i]/sw), dead:Math.round(td*w[i]/sw)});}
+  return out;
+}
+let DATA=FALLBACK, C={}, ROWS=[], MAIN=[], SUBONLY=[], charts={};
+let SUBSMAP={}, SUB2MAIN={}, PMAP={}, dirSort={k:'contribPoint',d:-1};
+let DAILY=[], DAILYMAP={}, HASDAILY=false;
+let rankScope='main', mainMetric='contrib', subMetric='dead';
+let CAMPROWS=[], campScope='all', campMetric='kp', campPeriod='';
+let campSel=null;
+const $=id=>document.getElementById(id);
+const yen=n=>Math.round(n||0).toLocaleString('ja-JP');
+const oku=n=>{n=n||0;const a=n/1e8;if(Math.abs(a)>=1)return a.toFixed(a>=100?0:2)+'億';const m=n/1e4;if(Math.abs(m)>=1)return m.toFixed(0)+'万';return yen(n);};
+const pct=n=>(n==null?'-':n.toFixed(1)+'%');
+function setStatus(kind,text){const b=$('statusbar');b.className='statusbar '+kind;$('statusText').textContent=text;}
+function g(r,k){return r[C[k]];}
+function buildSubsMap(subsD){
+  SUBSMAP={}; SUB2MAIN={};
+  (subsD.rows||[]).forEach(r=>{const mid=r[2]; (SUBSMAP[mid]=SUBSMAP[mid]||[]).push({subId:r[0],subName:r[1]}); SUB2MAIN[r[0]]=mid;});
+}
+function applyData(d, subsD, campRows, dailyRows){
+  DATA=d; C={}; DATA.cols.forEach((c,i)=>C[c]=i); ROWS=DATA.rows;
+  PMAP={}; ROWS.forEach(r=>{PMAP[String(g(r,'id'))]=r;});
+  DAILY = dailyRows||[]; HASDAILY = DAILY.length>0; DAILYMAP={};
+  DAILY.forEach(x=>{(DAILYMAP[x.id]=DAILYMAP[x.id]||[]).push({date:x.date,kp:x.kp,dead:x.dead,power:x.power});});
+  Object.keys(DAILYMAP).forEach(k=>DAILYMAP[k].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0));
+  buildSubsMap(subsD||SUBS_FALLBACK);
+  const hasSubs=Object.keys(SUB2MAIN).length>0;
+  const isSub=r=>{const id=String(g(r,'id'));
+    if(hasSubs) return Object.prototype.hasOwnProperty.call(SUB2MAIN,id);
+    return String(g(r,'sub')).toLowerCase()==='yes';};
+  MAIN=ROWS.filter(r=>!isSub(r));
+  SUBONLY=ROWS.filter(r=>isSub(r));
+  CAMPROWS = (campRows && campRows.length)? campRows : CAMP_FALLBACK;
+  $('recBadge').textContent='メイン '+MAIN.length+' ／ サブ '+SUBONLY.length;
+  renderDir(); renderRankTab(); renderCampTab(); renderDetail();
+}
+async function fetchCsv(url){
+  const res=await fetch(url+(url.includes('?')?'&':'?')+'cb='+Date.now());
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.text();
+}
+async function loadData(){
+  if(!SHEET_CSV_URL){setStatus('sample','サンプル表示中（陣営はデモ）');applyData(FALLBACK,SUBS_FALLBACK,CAMP_FALLBACK);return;}
+  setStatus('','読み込み中');
+  try{
+    const d=csvToData(await fetchCsv(SHEET_CSV_URL));
+    let subsD=SUBS_FALLBACK;
+    if(SUBS_CSV_URL){ try{ subsD=subsToData(await fetchCsv(SUBS_CSV_URL)); }catch(e){ subsD=SUBS_FALLBACK; } }
+    let camp=[], kn=0;
+    if(CAMP_COMBINED_CSV){
+      try{ camp=rawToData(await fetchCsv(CAMP_COMBINED_CSV)).filter(r=>r.kingdom); kn=new Set(camp.map(r=>r.kingdom)).size; }catch(e){}
+    }
+    let daily=[];
+    if(RAW_DAILY_CSV){ try{ daily=dailyToData(await fetchCsv(RAW_DAILY_CSV)); }catch(e){} }
+    const subSet=new Set((subsD.rows||[]).map(r=>String(r[0])));
+    const si=d.cols.indexOf('sub');
+    const mainN=d.rows.filter(r=>subSet.size?!subSet.has(String(r[0])):String(r[si]).toLowerCase()!=='yes').length;
+    setStatus('live','連携中 ・ 自国メイン'+mainN+'名 ・ 陣営'+kn+'王国 ・ '+new Date().toLocaleString('ja-JP'));
+    applyData(d, subsD, camp, daily);
+  }catch(e){ setStatus('err','読み込み失敗（'+e.message+'）'); applyData(FALLBACK,SUBS_FALLBACK,CAMP_FALLBACK); }
+}
+const DIRCOLS=[['name','名前'],['id','ID'],['contribPoint','貢献P'],['totalKP','撃破P'],['totalDead','戦死'],['kpNorm','撃破ノルマ']];
+function renderDir(){
+  const q=$('q').value.trim().toLowerCase();
+  let list=MAIN.filter(r=> !q || String(g(r,'id')).includes(q) || String(g(r,'name')).toLowerCase().includes(q));
+  list=[...list].sort((a,b)=>{const av=g(a,dirSort.k),bv=g(b,dirSort.k);
+    if(typeof av==='string')return av.localeCompare(bv)*dirSort.d*-1; return ((av==null?-1:av)-(bv==null?-1:bv))*dirSort.d;});
+  const th=$('dir').querySelector('thead');
+  th.innerHTML='<tr>'+DIRCOLS.map(([k,l])=>`<th data-k="${k}">${l}${dirSort.k===k?(dirSort.d<0?' ▼':' ▲'):''}</th>`).join('')+'</tr>';
+  th.querySelectorAll('th').forEach(t=>t.onclick=()=>{const k=t.dataset.k;if(dirSort.k===k)dirSort.d*=-1;else{dirSort.k=k;dirSort.d=-1;}renderDir();});
+  $('dir').querySelector('tbody').innerHTML=list.map(r=>`<tr data-id="${g(r,'id')}"><td>${g(r,'name')}</td><td>${g(r,'id')}</td><td>${oku(g(r,'contribPoint'))}</td><td>${oku(g(r,'totalKP'))}</td><td>${oku(g(r,'totalDead'))}</td><td class="${g(r,'kpNorm')>=100?'ok':'ng'}">${pct(g(r,'kpNorm'))}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">該当なし</td></tr>';
+  $('dir').querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>{$('q').value=tr.dataset.id;onSearch();});
+}
+function bars(v,max,color){const w=Math.max(0,Math.min(100,(v/max)*100));return `<div class="bar"><i style="width:${w}%;background:${color}"></i></div>`;}
+function renderDetail(){
+  const q=$('q').value.trim(), det=$('detail');
+  if(!q){det.innerHTML='';return;}
+  const hit=MAIN.filter(r=>String(g(r,'id'))===q);
+  const list = hit.length?hit : MAIN.filter(r=>String(g(r,'name')).toLowerCase()===q.toLowerCase());
+  if(list.length!==1){det.innerHTML='';return;}
+  const r=list[0], N=MAIN.length;
+  const kpN=g(r,'kpNorm'), dN=g(r,'deathNorm');
+  const kpColor=kpN>=100?'var(--green)':'var(--red)', dColor=dN>=100?'var(--green)':'var(--amber)';
+  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 合計（撃破・戦死）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数</span></h3>
+    <div class="tbl-wrap" style="max-height:none"><table class="numtbl">
+      <thead><tr><th>区分</th><th>計</th></tr></thead>
+      <tbody>
+        <tr><td>⚔️ 撃破ポイント</td><td><b>${yen(g(r,'totalKP'))}</b></td></tr>
+        <tr><td>\u{1F480} 戦死数</td><td><b>${yen(g(r,'totalDead'))}</b></td></tr>
+      </tbody></table></div>`;
+  const subs=SUBSMAP[String(g(r,'id'))]||[];
+  let subsHtml='';
+  if(subs.length){
+    let totDead=0, joined=0;
+    const rowsHtml=subs.map(s=>{
+      const pr=PMAP[s.subId];
+      const latest = pr? g(pr,'name') : s.subName;
+      const dead = pr? g(pr,'totalDead') : null;
+      const pw   = pr? g(pr,'startPower') : null;
+      if(pr){joined++; totDead+=(dead||0);}
+      return `<tr><td>${latest}${pr?'':' <span class="muted" style="font-size:10px">(登録名)</span>'}</td><td class="muted">${s.subId}</td><td>${pr?'<span class="ok">参加</span>':'<span class="muted">―</span>'}</td><td>${pw!=null?oku(pw):'-'}</td><td>${dead!=null?oku(dead):'-'}</td></tr>`;
+    }).join('');
+    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント（${subs.length}） <span class="muted" style="font-weight:400;font-size:12px">参加 ${joined} ／ サブ戦死合計 ${oku(totDead)}</span></h3><div class="tbl-wrap" style="max-height:300px"><table><thead><tr><th>サブ名(最新)</th><th>サブID</th><th>参加</th><th>戦力</th><th>戦死</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="hint">最新名はポータルのIDから取得。未参加は登録時の名前を表示。</div>`;
+  } else {
+    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント</h3><div class="hint">このメインに紐づくサブ登録はありません。</div>`;
+  }
+  det.innerHTML=`<div class="card"><div class="detail-head"><span class="nm">${g(r,'name')}</span><span class="id">ID: ${g(r,'id')}</span><span class="pill main">MAIN</span><span class="id">開始戦力 ${oku(g(r,'startPower'))} ／ 戦力上限 ${g(r,'powerCap')?oku(g(r,'powerCap')):'-'}</span></div>
+    <div class="norm"><div class="normbox"><div class="t">⚔️ 撃破ノルマ達成率</div><div class="big" style="color:${kpColor}">${pct(kpN)}</div>${bars(kpN,Math.max(150,kpN),kpColor)}<div class="meta">獲得 ${yen(g(r,'totalKP'))} / 目標 ${yen(g(r,'targetKPinc'))}</div></div>
+    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率</div><div class="big" style="color:${g(r,'targetDeathCnt')>0?dColor:'var(--muted)'}">${g(r,'targetDeathCnt')>0?pct(dN):'対象外'}</div>${g(r,'targetDeathCnt')>0?bars(dN,Math.max(100,dN||1),dColor):''}<div class="meta">戦死 ${yen(g(r,'totalDead'))}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${g(r,'targetDeathCnt')>0?yen(g(r,'targetDeathCnt')):'なし'}</div></div></div>
+    <div class="statgrid"><div class="sb"><div class="l">貢献順位</div><div class="v">${g(r,'contribRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">貢献Point ${oku(g(r,'contribPoint'))}</div></div>
+    <div class="sb"><div class="l">撃破順位</div><div class="v">${g(r,'kpRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total KP ${yen(g(r,'totalKP'))}</div></div>
+    <div class="sb"><div class="l">戦死順位</div><div class="v">${g(r,'deadRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total Dead ${yen(g(r,'totalDead'))}</div></div>
+    <div class="sb"><div class="l">撃破ノルマ判定</div><div class="v">${kpN>=100?'達成':'未達'}</div><div class="r">${kpN>=100?'対象外':'未達ペナルティ対象'}</div></div></div>
+    ${numHtml}
+    <h3 style="margin-top:18px">\u{1F4C8} 日次 撃破・戦死 推移 <span class="muted" style="font-weight:400;font-size:11px">各日=棒 / 累計=線 ・ 撃破=左軸 / 戦死=右軸</span></h3><div class="chart-box" style="height:300px"><canvas id="cDetail"></canvas></div><div class="hint" id="detailChartHint"></div>
+    ${subsHtml}</div>`;
+  drawDetailChart(r);
+}
+function drawDetailChart(r){
+  if(charts.cDetail)charts.cDetail.destroy();
+  let series=DAILYMAP[String(g(r,'id'))]||[], demo=false;
+  if(!series.length && !HASDAILY){ series=makeDemoDaily(r); demo=true; }
+  const hint=$('detailChartHint');
+  if(hint) hint.textContent = demo ? '※ 生データCSV未設定のためデモ日次を表示中（RAW_DAILY_CSV を設定すると実データになります）'
+    : (series.length? '' : '※ この総督の日次データがありません（生データCSVに未取込）');
+  const labels=series.map(x=>x.date.slice(5).replace('-','/'));
+  let ck=0,cd=0; const cumKP=[],cumDead=[];
+  const dayKP=series.map(x=>x.kp), dayDead=series.map(x=>x.dead);
+  series.forEach(x=>{ck+=x.kp;cd+=x.dead;cumKP.push(ck);cumDead.push(cd);});
+  charts.cDetail=new Chart($('cDetail'),{
+    data:{labels,datasets:[
+      {type:'bar',label:'撃破/日',data:dayKP,backgroundColor:'#4d8bff',borderRadius:3,yAxisID:'y',order:3},
+      {type:'line',label:'撃破累計',data:cumKP,borderColor:'#8fb8ff',backgroundColor:'#8fb8ff',yAxisID:'y',tension:.3,pointRadius:2,borderWidth:2,order:1},
+      {type:'bar',label:'戦死/日',data:dayDead,backgroundColor:'#ff5a6a',borderRadius:3,yAxisID:'y2',order:4},
+      {type:'line',label:'戦死累計',data:cumDead,borderColor:'#ffb020',backgroundColor:'#ffb020',yAxisID:'y2',tension:.3,pointRadius:2,borderWidth:2,order:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9aa6bd'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+      scales:{x:{ticks:{color:'#9aa6bd'},grid:{color:'#2c374f'}},
+        y:{position:'left',title:{display:true,text:'撃破',color:'#4d8bff'},ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'}},
+        y2:{position:'right',title:{display:true,text:'戦死',color:'#ff5a6a'},ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{drawOnChartArea:false}}}}});
+}
+function onSearch(){renderDir();renderDetail();}
+const METRICS={
+  contrib:{label:'貢献度Point',key:'contribPoint',color:'#b06bff',fmt:oku,isNorm:false},
+  kp:{label:'撃破ポイント',key:'totalKP',color:'#4d8bff',fmt:oku,isNorm:false},
+  dead:{label:'戦死数',key:'totalDead',color:'#ff5a6a',fmt:oku,isNorm:false},
+  norm:{label:'ノルマ達成率',key:'kpNorm',color:'#36c275',fmt:pct,isNorm:true}
+};
+const SUBMETRICS={
+  dead:{label:'戦死数',key:'totalDead',color:'#ff5a6a',fmt:oku,isNorm:false},
+  kp:{label:'撃破ポイント',key:'totalKP',color:'#4d8bff',fmt:oku,isNorm:false}
+};
+function curSet(){return rankScope==='sub'?SUBMETRICS:METRICS;}
+function curKey(){return rankScope==='sub'?subMetric:mainMetric;}
+function curList(){return rankScope==='sub'?SUBONLY:MAIN;}
+function renderKPIs(){
+  const n=MAIN.length;
+  const avgNorm=n?MAIN.reduce((a,r)=>a+(g(r,'kpNorm')||0),0)/n:0;
+  const achieved=MAIN.filter(r=>g(r,'kpNorm')>=100).length;
+  const items=[
+    ['メイン / サブ', MAIN.length+' / '+SUBONLY.length,'対象人数'],
+    ['撃破ノルマ平均', avgNorm.toFixed(1)+'%', achieved+' 名達成'],
+    ['総撃破ポイント', oku(MAIN.reduce((a,r)=>a+(g(r,'totalKP')||0),0)),'メイン合計'],
+    ['総戦死数', oku(ROWS.reduce((a,r)=>a+(g(r,'totalDead')||0),0)),'全体合計'],
+  ];
+  $('kpis').innerHTML=items.map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+}
+function renderScopeBtns(){
+  const scopes=[['main','メイン'],['sub','サブのみ']];
+  $('scopebtns').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">対象:</span>'+scopes.map(([k,l])=>`<div class="mbtn ${k===rankScope?'active':''}" data-s="${k}">${l}（${k==='sub'?SUBONLY.length:MAIN.length}）</div>`).join('');
+  $('scopebtns').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{rankScope=b.dataset.s; renderRankTab();});
+}
+function renderMetricBtns(){
+  const set=curSet(), cur=curKey();
+  $('metricbtns').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">並び替え（クリック）:</span>'+Object.entries(set).map(([k,m])=>`<div class="mbtn ${k===cur?'active':''}" data-m="${k}">${m.label}順</div>`).join('');
+  $('metricbtns').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{if(rankScope==='sub')subMetric=b.dataset.m;else mainMetric=b.dataset.m;renderMetricBtns();renderRanking();});
+}
+function renderRanking(){
+  const set=curSet(), m=set[curKey()], list=curList();
+  const sorted=[...list].sort((a,b)=>(g(b,m.key)||0)-(g(a,m.key)||0));
+  $('rankTitle').textContent=(rankScope==='sub'?'サブのみ ':'メイン ')+m.label+' TOP20';
+  const top=sorted.slice(0,20);
+  if(charts.cRank)charts.cRank.destroy();
+  charts.cRank=new Chart($('cRank'),{type:'bar',
+    data:{labels:top.map(r=>g(r,'name')),datasets:[{data:top.map(r=>g(r,m.key)||0),backgroundColor:m.color,borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>m.fmt(c.raw)}}},
+      scales:{x:{ticks:{color:'#9aa6bd',callback:v=>m.isNorm?v+'%':oku(v)},grid:{color:'#2c374f'}},
+        y:{ticks:{color:'#9aa6bd',font:{size:11}},grid:{display:false}}}}});
+  const th=$('rankTbl').querySelector('thead'), tb=$('rankTbl').querySelector('tbody');
+  if(rankScope==='sub'){
+    th.innerHTML='<tr><th>順位</th><th>名前</th><th>所属メイン</th><th>戦死</th><th>撃破P</th></tr>';
+    tb.innerHTML=sorted.map((r,i)=>{const mid=SUB2MAIN[String(g(r,'id'))]; const mn=(mid&&PMAP[mid])?g(PMAP[mid],'name'):(mid||'-');
+      return `<tr><td><span class="rk ${i<3?'g':''}">${i+1}</span></td><td>${g(r,'name')}</td><td class="muted">${mn}</td><td><b>${oku(g(r,'totalDead'))}</b></td><td>${oku(g(r,'totalKP'))}</td></tr>`;}).join('') || '<tr><td colspan="5" class="empty">サブのデータがありません（公開後に表示）</td></tr>';
+    $('rankHint').textContent='※ サブアカウント（sub=Yes）のみ。並び替えは上のボタンで切替。';
+  } else {
+    th.innerHTML='<tr><th>順位</th><th>名前</th><th>'+m.label+'</th><th>撃破ノルマ</th><th>戦死</th><th>貢献P</th></tr>';
+    tb.innerHTML=sorted.map((r,i)=>{const norm=g(r,'kpNorm');
+      return `<tr data-id="${g(r,'id')}"><td><span class="rk ${i<3?'g':''}">${i+1}</span></td><td>${g(r,'name')}</td><td><b>${m.fmt(g(r,m.key))}</b></td><td class="${norm>=100?'ok':'ng'}">${pct(norm)}</td><td>${oku(g(r,'totalDead'))}</td><td>${oku(g(r,'contribPoint'))}</td></tr>`;}).join('');
+    tb.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{switchTab('search');$('q').value=tr.dataset.id;onSearch();});
+    $('rankHint').textContent='※ 並び替えは上のボタンで切替。行クリックで個人ページへ。100%未満（赤）は撃破ノルマ未達。';
+  }
+  $('rankCount').textContent='（'+(rankScope==='sub'?'サブ '+SUBONLY.length:'メイン '+MAIN.length)+' 名）';
+}
+function renderRankTab(){renderKPIs();renderScopeBtns();renderMetricBtns();renderRanking();}
+const CAMPMET={kp:{label:'撃破ポイント',key:'kp',color:'#4d8bff'},dead:{label:'戦死数',key:'dead',color:'#ff5a6a'}};
+function campKingdoms(){return [...new Set(CAMPROWS.map(r=>r.kingdom).filter(Boolean))];}
+function campPeriodsList(){return [...new Set(CAMPROWS.map(r=>r.period).filter(Boolean))];}
+function renderCampPeriodBtns(){
+  const ps=campPeriodsList(), el=$('campperiod');
+  if(!ps.length){ el.innerHTML=''; campPeriod=''; return; }
+  const order=['全期間','1st','2nd']; ps.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  if(!ps.includes(campPeriod)) campPeriod = ps.includes('全期間')?'全期間':ps[0];
+  el.innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">期間:</span>'+ps.map(p=>`<div class="mbtn ${p===campPeriod?'active':''}" data-p="${p}">${p}</div>`).join('');
+  el.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campPeriod=b.dataset.p;renderCampPeriodBtns();renderCamp();});
+}
+function renderCampScopeBtns(){
+  const ks=campKingdoms();
+  const btns=[['all','全体（自国＋他国）']].concat(ks.map(k=>[k,k]));
+  if(!btns.some(b=>b[0]===campScope)) campScope='all';
+  $('campscope').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">王国:</span>'+btns.map(([v,l])=>`<div class="mbtn ${v===campScope?'active':''}" data-c="${v}">${l}</div>`).join('');
+  $('campscope').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campScope=b.dataset.c;renderCampScopeBtns();renderCamp();});
+}
+function renderCampMetricBtns(){
+  $('campmetric').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">並び替え（クリック）:</span>'+Object.entries(CAMPMET).map(([k,m])=>`<div class="mbtn ${k===campMetric?'active':''}" data-m="${k}">${m.label}順</div>`).join('');
+  $('campmetric').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campMetric=b.dataset.m;renderCampMetricBtns();renderCamp();});
+}
+function renderCamp(){
+  const m=CAMPMET[campMetric];
+  let list=CAMPROWS; if(campPeriod) list=list.filter(r=>r.period===campPeriod); if(campScope!=='all') list=list.filter(r=>r.kingdom===campScope);
+  const sorted=[...list].sort((a,b)=>(b[m.key]||0)-(a[m.key]||0));
+  $('campTitle').textContent=(campPeriod?campPeriod+' / ':'')+(campScope==='all'?'全体（自国＋他国）':campScope)+' ／ '+m.label+' TOP20';
+  const top=sorted.slice(0,20);
+  if(charts.cCamp)charts.cCamp.destroy();
+  charts.cCamp=new Chart($('cCamp'),{type:'bar',
+    data:{labels:top.map(r=>r.name),datasets:[{data:top.map(r=>r[m.key]||0),backgroundColor:top.map(r=>/自国/.test(r.kingdom)?'#36c275':m.color),borderRadius:3}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>oku(c.raw)+'（'+top[c.dataIndex].kingdom+'）'}}},
+      scales:{x:{ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'}},y:{ticks:{color:'#9aa6bd',font:{size:11}},grid:{display:false}}}}});
+  const th=$('campTbl').querySelector('thead'), tb=$('campTbl').querySelector('tbody');
+  th.innerHTML='<tr><th>順位</th><th>名前</th><th>王国</th><th>撃破P</th><th>戦死</th></tr>';
+  tb.innerHTML=sorted.map((r,i)=>{const self=/自国/.test(r.kingdom);
+    const kpC=campMetric==='kp'?`<b>${oku(r.kp)}</b>`:oku(r.kp);
+    const dC=campMetric==='dead'?`<b>${oku(r.dead)}</b>`:oku(r.dead);
+    return `<tr data-id="${r.id}" data-k="${r.kingdom}"><td><span class="rk ${i<3?'g':''}">${i+1}</span></td><td>${r.name}</td><td class="${self?'ok':'muted'}">${r.kingdom}</td><td>${kpC}</td><td>${dC}</td></tr>`;}).join('') || '<tr><td colspan="5" class="empty">陣営データがありません（CSV設定後に表示）</td></tr>';
+  tb.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{campSel={id:tr.dataset.id,kingdom:tr.dataset.k};renderCampDetail();});
+  $('campCount').textContent='（'+(campScope==='all'?'全'+campKingdoms().length+'王国':campScope)+' ・ '+sorted.length+'名）';
+  $('campHint').textContent='※ 緑=自国。行をクリックするとその人の撃破・戦死を期間別グラフで表示。各王国の生スキャンを公開CSVにして設定すると自動追加。';
+}
+function renderCampDetail(){
+  const el=$('campDetail');
+  if(!campSel){ el.innerHTML=''; if(charts.cCampDetail){charts.cCampDetail.destroy();charts.cCampDetail=null;} return; }
+  const rows=CAMPROWS.filter(r=>String(r.id)===String(campSel.id)&&r.kingdom===campSel.kingdom);
+  if(!rows.length){ el.innerHTML=''; campSel=null; return; }
+  const order=['全期間','1st','2nd'], byP={};
+  rows.forEach(r=>byP[r.period||'全期間']=r);
+  const labels=order.filter(p=>byP[p]);
+  const r0=rows[0];
+  const self=/自国/.test(r0.kingdom);
+  el.innerHTML=`<div class="card"><div class="detail-head">
+      <span class="nm">${r0.name}</span>
+      <span class="id">ID: ${r0.id} ／ 王国 <span class="${self?'ok':'muted'}">${r0.kingdom}</span></span>
+      <button onclick="campSel=null;renderCampDetail()" style="margin-left:auto;background:#0d1626;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 12px;cursor:pointer">✕ 閉じる</button>
+    </div>
+    <div class="statgrid" style="margin-top:0;margin-bottom:12px">
+      ${labels.map(p=>`<div class="sb"><div class="l">${p} 撃破P</div><div class="v" style="font-size:15px">${oku(byP[p].kp)}</div><div class="r">戦死 ${oku(byP[p].dead)}</div></div>`).join('')}
+    </div>
+    <div class="chart-box" style="height:240px"><canvas id="cCampDetail"></canvas></div></div>`;
+  if(charts.cCampDetail)charts.cCampDetail.destroy();
+  charts.cCampDetail=new Chart($('cCampDetail'),{type:'bar',
+    data:{labels,datasets:[
+      {label:'撃破ポイント',data:labels.map(p=>byP[p].kp),backgroundColor:'#4d8bff',borderRadius:4},
+      {label:'戦死数',data:labels.map(p=>byP[p].dead),backgroundColor:'#ff5a6a',borderRadius:4,yAxisID:'y2'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9aa6bd'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+      scales:{x:{ticks:{color:'#9aa6bd'},grid:{color:'#2c374f'}},
+        y:{position:'left',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'},title:{display:true,text:'撃破P',color:'#9aa6bd'}},
+        y2:{position:'right',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{drawOnChartArea:false},title:{display:true,text:'戦死',color:'#9aa6bd'}}}}});
+}
+function renderCampTab(){renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();renderCamp();renderCampDetail();}
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+t).classList.add('active');
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+$('q').addEventListener('input',onSearch);
+$('qClr').onclick=()=>{$('q').value='';onSearch();};
+$('btnReload').onclick=loadData;
+loadData();
+</script>
+</
