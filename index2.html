@@ -229,7 +229,9 @@ function applyData(d, subsD, campRows, dailyRows){
   DATA=d; C={}; DATA.cols.forEach((c,i)=>C[c]=i); ROWS=DATA.rows;
   PMAP={}; ROWS.forEach(r=>{PMAP[String(g(r,'id'))]=r;});
   DAILY = dailyRows||[]; HASDAILY = DAILY.length>0; DAILYMAP={};
-  DAILY.forEach(x=>{(DAILYMAP[x.id]=DAILYMAP[x.id]||[]).push({date:x.date,kp:x.kp,dead:x.dead,power:x.power});});
+  const _dseen={};
+  DAILY.forEach(x=>{const dk=x.id+'|'+x.date; if(_dseen[dk])return; _dseen[dk]=true; // 同一ID・同一日付の重複を除外（保険）
+    (DAILYMAP[x.id]=DAILYMAP[x.id]||[]).push({date:x.date,kp:x.kp,dead:x.dead,power:x.power});});
   Object.keys(DAILYMAP).forEach(k=>DAILYMAP[k].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0));
   buildSubsMap(subsD||SUBS_FALLBACK);
   const hasSubs=Object.keys(SUB2MAIN).length>0;
@@ -422,7 +424,7 @@ function campKingdoms(){return [...new Set(CAMPROWS.map(r=>r.kingdom).filter(Boo
 function campPeriodsList(){return [...new Set(CAMPROWS.map(r=>r.period).filter(Boolean))];}
 function renderCampPeriodBtns(){
   const ps=campPeriodsList(), el=$('campperiod');
-  if(!ps.length){ el.innerHTML=''; campPeriod=''; return; }
+  if(ps.length<=1){ el.innerHTML=''; campPeriod=ps[0]||''; return; }  // 1st/2nd廃止：期間が1つなら切替を出さない
   const order=['全期間','1st','2nd']; ps.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(!ps.includes(campPeriod)) campPeriod = ps.includes('全期間')?'全期間':ps[0];
   el.innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">期間:</span>'+ps.map(p=>`<div class="mbtn ${p===campPeriod?'active':''}" data-p="${p}">${p}</div>`).join('');
@@ -477,24 +479,27 @@ function renderCampDetail(){
   const labels=order.filter(p=>byP[p]);
   const r0=rows[0];
   const self=/自国/.test(r0.kingdom);
+  const showChart = labels.length>1;   // 1st/2nd廃止：全期間だけならグラフは出さない
   el.innerHTML=`<div class="card"><div class="detail-head">
       <span class="nm">${r0.name}</span>
       <span class="id">ID: ${r0.id} ／ 王国 <span class="${self?'ok':'muted'}">${r0.kingdom}</span></span>
       <button onclick="campSel=null;renderCampDetail()" style="margin-left:auto;background:#0d1626;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 12px;cursor:pointer">✕ 閉じる</button>
     </div>
-    <div class="statgrid" style="margin-top:0;margin-bottom:12px">
-      ${labels.map(p=>`<div class="sb"><div class="l">${p} 撃破P</div><div class="v" style="font-size:15px">${oku(byP[p].kp)}</div><div class="r">戦死 ${oku(byP[p].dead)}</div></div>`).join('')}
+    <div class="statgrid" style="margin-top:0;margin-bottom:0">
+      ${labels.map(p=>`<div class="sb"><div class="l">${p==='全期間'?'':(p+' ')}撃破P</div><div class="v" style="font-size:15px">${oku(byP[p].kp)}</div><div class="r">戦死 ${oku(byP[p].dead)}</div></div>`).join('')}
     </div>
-    <div class="chart-box" style="height:240px"><canvas id="cCampDetail"></canvas></div></div>`;
-  if(charts.cCampDetail)charts.cCampDetail.destroy();
-  charts.cCampDetail=new Chart($('cCampDetail'),{type:'bar',
-    data:{labels,datasets:[
-      {label:'撃破ポイント',data:labels.map(p=>byP[p].kp),backgroundColor:'#4d8bff',borderRadius:4},
-      {label:'戦死数',data:labels.map(p=>byP[p].dead),backgroundColor:'#ff5a6a',borderRadius:4,yAxisID:'y2'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9aa6bd'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
-      scales:{x:{ticks:{color:'#9aa6bd'},grid:{color:'#2c374f'}},
-        y:{position:'left',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'},title:{display:true,text:'撃破P',color:'#9aa6bd'}},
-        y2:{position:'right',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{drawOnChartArea:false},title:{display:true,text:'戦死',color:'#9aa6bd'}}}}});
+    ${showChart?'<div class="chart-box" style="height:240px;margin-top:12px"><canvas id="cCampDetail"></canvas></div>':''}</div>`;
+  if(charts.cCampDetail){charts.cCampDetail.destroy();charts.cCampDetail=null;}
+  if(showChart){
+    charts.cCampDetail=new Chart($('cCampDetail'),{type:'bar',
+      data:{labels,datasets:[
+        {label:'撃破ポイント',data:labels.map(p=>byP[p].kp),backgroundColor:'#4d8bff',borderRadius:4},
+        {label:'戦死数',data:labels.map(p=>byP[p].dead),backgroundColor:'#ff5a6a',borderRadius:4,yAxisID:'y2'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9aa6bd'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+        scales:{x:{ticks:{color:'#9aa6bd'},grid:{color:'#2c374f'}},
+          y:{position:'left',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'},title:{display:true,text:'撃破P',color:'#9aa6bd'}},
+          y2:{position:'right',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{drawOnChartArea:false},title:{display:true,text:'戦死',color:'#9aa6bd'}}}}});
+  }
 }
 function renderCampTab(){
   renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();
