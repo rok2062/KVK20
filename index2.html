@@ -158,11 +158,24 @@ function conv(key,v){
   if(!isFinite(n)) return 0;
   return n;
 }
+const HDRMAP={'id':'id','ID':'id','name':'name','NAME':'name','Name':'name','sub':'sub',
+  'Start Power':'startPower','撃破数目標値':'targetKPinc','目標死者数':'targetDeathCnt',
+  'Total KP':'totalKP','Total Dead':'totalDead','Total Dead T4':'totalDeadT4','Total Dead T5':'totalDeadT5',
+  'KP Rank':'kpRank','Dead Rank':'deadRank','貢献順位':'contribRank','貢献Point':'contribPoint',
+  '撃破ノルマ達成率':'kpNorm','戦死ノルマ達成率':'deathNorm'};
 function csvToData(text){
-  const arr=parseCSV(text), recs=[];
+  const arr=parseCSV(text);
+  // ヘッダー行から列位置を特定（旧45列/新16列どちらでも追従）。見つからなければ固定IXにフォールバック
+  let map=null;
+  for(const r of arr){
+    const m={}; let hits=0;
+    for(let i=0;i<r.length;i++){ const key=HDRMAP[String(r[i]==null?'':r[i]).trim()]; if(key && !(key in m)){ m[key]=i; hits++; } }
+    if(hits>=6){ map=m; break; }
+  }
+  const recs=[];
   for(const r of arr){
     if(!r || !/^\d{4,}$/.test(String(r[0]||'').trim())) continue;
-    recs.push(COLS.map(k=>conv(k, r[IX[k]])));
+    recs.push(COLS.map(k=>{ const idx = map ? (k in map ? map[k] : undefined) : IX[k]; return conv(k, idx==null?undefined:r[idx]); }));
   }
   if(!recs.length) throw new Error('no rows');
   return {cols:COLS, rows:recs};
