@@ -213,6 +213,7 @@ let SUBSMAP={}, SUB2MAIN={}, PMAP={}, dirSort={k:'contribPoint',d:-1};
 let DAILY=[], DAILYMAP={}, HASDAILY=false;
 let rankScope='main', mainMetric='contrib', subMetric='dead';
 let CAMPROWS=[], campScope='all', campMetric='kp', campPeriod='';
+const CAMP_CAP=100; let campShowAll=false, campNeedsRender=true;
 let campSel=null;
 const $=id=>document.getElementById(id);
 const yen=n=>Math.round(n||0).toLocaleString('ja-JP');
@@ -419,18 +420,18 @@ function renderCampPeriodBtns(){
   const order=['全期間','1st','2nd']; ps.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
   if(!ps.includes(campPeriod)) campPeriod = ps.includes('全期間')?'全期間':ps[0];
   el.innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">期間:</span>'+ps.map(p=>`<div class="mbtn ${p===campPeriod?'active':''}" data-p="${p}">${p}</div>`).join('');
-  el.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campPeriod=b.dataset.p;renderCampPeriodBtns();renderCamp();});
+  el.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campPeriod=b.dataset.p;renderCampPeriodBtns();campShowAll=false;renderCamp();});
 }
 function renderCampScopeBtns(){
   const ks=campKingdoms();
   const btns=[['all','全体（自国＋他国）']].concat(ks.map(k=>[k,k]));
   if(!btns.some(b=>b[0]===campScope)) campScope='all';
   $('campscope').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">王国:</span>'+btns.map(([v,l])=>`<div class="mbtn ${v===campScope?'active':''}" data-c="${v}">${l}</div>`).join('');
-  $('campscope').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campScope=b.dataset.c;renderCampScopeBtns();renderCamp();});
+  $('campscope').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campScope=b.dataset.c;renderCampScopeBtns();campShowAll=false;renderCamp();});
 }
 function renderCampMetricBtns(){
   $('campmetric').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">並び替え（クリック）:</span>'+Object.entries(CAMPMET).map(([k,m])=>`<div class="mbtn ${k===campMetric?'active':''}" data-m="${k}">${m.label}順</div>`).join('');
-  $('campmetric').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campMetric=b.dataset.m;renderCampMetricBtns();renderCamp();});
+  $('campmetric').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campMetric=b.dataset.m;renderCampMetricBtns();campShowAll=false;renderCamp();});
 }
 function renderCamp(){
   const m=CAMPMET[campMetric];
@@ -445,13 +446,20 @@ function renderCamp(){
       scales:{x:{ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'}},y:{ticks:{color:'#9aa6bd',font:{size:11}},grid:{display:false}}}}});
   const th=$('campTbl').querySelector('thead'), tb=$('campTbl').querySelector('tbody');
   th.innerHTML='<tr><th>順位</th><th>名前</th><th>王国</th><th>撃破P</th><th>戦死</th></tr>';
-  tb.innerHTML=sorted.map((r,i)=>{const self=/自国/.test(r.kingdom);
+  const capped = !campShowAll && sorted.length>CAMP_CAP;
+  const view = capped ? sorted.slice(0,CAMP_CAP) : sorted;
+  tb.innerHTML=view.map((r,i)=>{const self=/自国/.test(r.kingdom);
     const kpC=campMetric==='kp'?`<b>${oku(r.kp)}</b>`:oku(r.kp);
     const dC=campMetric==='dead'?`<b>${oku(r.dead)}</b>`:oku(r.dead);
     return `<tr data-id="${r.id}" data-k="${r.kingdom}"><td><span class="rk ${i<3?'g':''}">${i+1}</span></td><td>${r.name}</td><td class="${self?'ok':'muted'}">${r.kingdom}</td><td>${kpC}</td><td>${dC}</td></tr>`;}).join('') || '<tr><td colspan="5" class="empty">陣営データがありません（CSV設定後に表示）</td></tr>';
   tb.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{campSel={id:tr.dataset.id,kingdom:tr.dataset.k};renderCampDetail();});
-  $('campCount').textContent='（'+(campScope==='all'?'全'+campKingdoms().length+'王国':campScope)+' ・ '+sorted.length+'名）';
-  $('campHint').textContent='※ 緑=自国。行をクリックするとその人の撃破・戦死を期間別グラフで表示。各王国の生スキャンを公開CSVにして設定すると自動追加。';
+  $('campCount').textContent='（'+(campScope==='all'?'全'+campKingdoms().length+'王国':campScope)+' ・ '+sorted.length+'名'+(capped?' ／ 上位'+CAMP_CAP+'表示':'')+'）';
+  const btn = capped
+    ? ` <button id="campMore" style="background:#0d1626;border:1px solid var(--line);color:var(--blue);border-radius:6px;padding:3px 10px;cursor:pointer;font-weight:600">全${sorted.length}件を表示（重い）</button>`
+    : (campShowAll && sorted.length>CAMP_CAP ? ` <button id="campLess" style="background:#0d1626;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:3px 10px;cursor:pointer">上位${CAMP_CAP}件に戻す</button>` : '');
+  $('campHint').innerHTML='※ 緑=自国。行クリックで期間別グラフ。表示を軽くするため既定は上位'+CAMP_CAP+'件。'+btn;
+  const mb=document.getElementById('campMore'); if(mb) mb.onclick=()=>{campShowAll=true;renderCamp();};
+  const lb=document.getElementById('campLess'); if(lb) lb.onclick=()=>{campShowAll=false;renderCamp();};
 }
 function renderCampDetail(){
   const el=$('campDetail');
@@ -482,11 +490,19 @@ function renderCampDetail(){
         y:{position:'left',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{color:'#2c374f'},title:{display:true,text:'撃破P',color:'#9aa6bd'}},
         y2:{position:'right',ticks:{color:'#9aa6bd',callback:v=>oku(v)},grid:{drawOnChartArea:false},title:{display:true,text:'戦死',color:'#9aa6bd'}}}}});
 }
-function renderCampTab(){renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();renderCamp();renderCampDetail();}
+function renderCampTab(){
+  renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();
+  if(document.getElementById('page-camp').classList.contains('active')){ renderCamp();renderCampDetail(); campNeedsRender=false; }
+  else { campNeedsRender=true; }
+}
 function switchTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   $('page-'+t).classList.add('active');
+  if(t==='camp'){
+    if(campNeedsRender){ renderCamp(); renderCampDetail(); campNeedsRender=false; }
+    else { if(charts.cCamp)charts.cCamp.resize(); if(charts.cCampDetail)charts.cCampDetail.resize(); }
+  } else if(t==='rank'){ if(charts.cRank)charts.cRank.resize(); }
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
 $('q').addEventListener('input',onSearch);
@@ -494,4 +510,5 @@ $('qClr').onclick=()=>{$('q').value='';onSearch();};
 $('btnReload').onclick=loadData;
 loadData();
 </script>
-</
+</body>
+</html>
