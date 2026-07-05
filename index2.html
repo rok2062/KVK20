@@ -287,14 +287,20 @@ function renderDetail(){
   const list = hit.length?hit : MAIN.filter(r=>String(g(r,'name')).toLowerCase()===q.toLowerCase());
   if(list.length!==1){det.innerHTML='';return;}
   const r=list[0], N=MAIN.length;
-  const kpN=g(r,'kpNorm'), dN=g(r,'deathNorm');
+  const dseries=DAILYMAP[String(g(r,'id'))]||[], useRaw=dseries.length>0;
+  const dispKP = useRaw ? dseries.reduce((a,x)=>a+(x.kp||0),0) : g(r,'totalKP');
+  const dispDead = useRaw ? dseries.reduce((a,x)=>a+(x.dead||0),0) : g(r,'totalDead');
+  const srcNote = useRaw ? '生データ集計' : 'ポータル集計';
+  const tgtKP = g(r,'targetKPinc');
+  const kpN = useRaw ? (tgtKP>0 ? dispKP/tgtKP*100 : g(r,'kpNorm')) : g(r,'kpNorm');
+  const dN=g(r,'deathNorm');
   const kpColor=kpN>=100?'var(--green)':'var(--red)', dColor=dN>=100?'var(--green)':'var(--amber)';
-  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 合計（撃破・戦死）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数</span></h3>
+  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 合計（撃破・戦死）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数 ・ ${srcNote}</span></h3>
     <div class="tbl-wrap" style="max-height:none"><table class="numtbl">
       <thead><tr><th>区分</th><th>計</th></tr></thead>
       <tbody>
-        <tr><td>⚔️ 撃破ポイント</td><td><b>${yen(g(r,'totalKP'))}</b></td></tr>
-        <tr><td>\u{1F480} 戦死数</td><td><b>${yen(g(r,'totalDead'))}</b></td></tr>
+        <tr><td>⚔️ 撃破ポイント</td><td><b>${yen(dispKP)}</b></td></tr>
+        <tr><td>\u{1F480} 戦死数</td><td><b>${yen(dispDead)}</b></td></tr>
       </tbody></table></div>`;
   const subs=SUBSMAP[String(g(r,'id'))]||[];
   let subsHtml='';
@@ -313,11 +319,11 @@ function renderDetail(){
     subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント</h3><div class="hint">このメインに紐づくサブ登録はありません。</div>`;
   }
   det.innerHTML=`<div class="card"><div class="detail-head"><span class="nm">${g(r,'name')}</span><span class="id">ID: ${g(r,'id')}</span><span class="pill main">MAIN</span><span class="id">開始戦力 ${oku(g(r,'startPower'))} ／ 戦力上限 ${g(r,'powerCap')?oku(g(r,'powerCap')):'-'}</span></div>
-    <div class="norm"><div class="normbox"><div class="t">⚔️ 撃破ノルマ達成率</div><div class="big" style="color:${kpColor}">${pct(kpN)}</div>${bars(kpN,Math.max(150,kpN),kpColor)}<div class="meta">獲得 ${yen(g(r,'totalKP'))} / 目標 ${yen(g(r,'targetKPinc'))}</div></div>
-    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率</div><div class="big" style="color:${g(r,'targetDeathCnt')>0?dColor:'var(--muted)'}">${g(r,'targetDeathCnt')>0?pct(dN):'対象外'}</div>${g(r,'targetDeathCnt')>0?bars(dN,Math.max(100,dN||1),dColor):''}<div class="meta">戦死 ${yen(g(r,'totalDead'))}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${g(r,'targetDeathCnt')>0?yen(g(r,'targetDeathCnt')):'なし'}</div></div></div>
+    <div class="norm"><div class="normbox"><div class="t">⚔️ 撃破ノルマ達成率</div><div class="big" style="color:${kpColor}">${pct(kpN)}</div>${bars(kpN,Math.max(150,kpN),kpColor)}<div class="meta">獲得 ${yen(dispKP)} / 目標 ${yen(g(r,'targetKPinc'))}</div></div>
+    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率</div><div class="big" style="color:${g(r,'targetDeathCnt')>0?dColor:'var(--muted)'}">${g(r,'targetDeathCnt')>0?pct(dN):'対象外'}</div>${g(r,'targetDeathCnt')>0?bars(dN,Math.max(100,dN||1),dColor):''}<div class="meta">戦死 ${yen(dispDead)}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${g(r,'targetDeathCnt')>0?yen(g(r,'targetDeathCnt')):'なし'}</div></div></div>
     <div class="statgrid"><div class="sb"><div class="l">貢献順位</div><div class="v">${g(r,'contribRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">貢献Point ${oku(g(r,'contribPoint'))}</div></div>
-    <div class="sb"><div class="l">撃破順位</div><div class="v">${g(r,'kpRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total KP ${yen(g(r,'totalKP'))}</div></div>
-    <div class="sb"><div class="l">戦死順位</div><div class="v">${g(r,'deadRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total Dead ${yen(g(r,'totalDead'))}</div></div>
+    <div class="sb"><div class="l">撃破順位</div><div class="v">${g(r,'kpRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total KP ${yen(dispKP)}</div></div>
+    <div class="sb"><div class="l">戦死順位</div><div class="v">${g(r,'deadRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total Dead ${yen(dispDead)}</div></div>
     <div class="sb"><div class="l">撃破ノルマ判定</div><div class="v">${kpN>=100?'達成':'未達'}</div><div class="r">${kpN>=100?'対象外':'未達ペナルティ対象'}</div></div></div>
     ${numHtml}
     <h3 style="margin-top:18px">\u{1F4C8} 日次 撃破・戦死 推移 <span class="muted" style="font-weight:400;font-size:11px">各日=棒 / 累計=線 ・ 撃破=左軸 / 戦死=右軸</span></h3><div class="chart-box" style="height:300px"><canvas id="cDetail"></canvas></div><div class="hint" id="detailChartHint"></div>
