@@ -204,10 +204,14 @@ function buildSubsMap(subsD){
 function applyData(d, subsD, campRows){
   DATA=d; C={}; DATA.cols.forEach((c,i)=>C[c]=i); ROWS=DATA.rows;
   PMAP={}; ROWS.forEach(r=>{PMAP[String(g(r,'id'))]=r;});
-  MAIN=ROWS.filter(r=>String(g(r,'sub')).toLowerCase()!=='yes');
-  SUBONLY=ROWS.filter(r=>String(g(r,'sub')).toLowerCase()==='yes');
-  CAMPROWS = (campRows && campRows.length)? campRows : CAMP_FALLBACK;
   buildSubsMap(subsD||SUBS_FALLBACK);
+  const hasSubs=Object.keys(SUB2MAIN).length>0;
+  const isSub=r=>{const id=String(g(r,'id'));
+    if(hasSubs) return Object.prototype.hasOwnProperty.call(SUB2MAIN,id);
+    return String(g(r,'sub')).toLowerCase()==='yes';};
+  MAIN=ROWS.filter(r=>!isSub(r));
+  SUBONLY=ROWS.filter(r=>isSub(r));
+  CAMPROWS = (campRows && campRows.length)? campRows : CAMP_FALLBACK;
   $('recBadge').textContent='メイン '+MAIN.length+' ／ サブ '+SUBONLY.length;
   renderDir(); renderRankTab(); renderCampTab(); renderDetail();
 }
@@ -227,8 +231,9 @@ async function loadData(){
     if(CAMP_COMBINED_CSV){
       try{ camp=rawToData(await fetchCsv(CAMP_COMBINED_CSV)).filter(r=>r.kingdom); kn=new Set(camp.map(r=>r.kingdom)).size; }catch(e){}
     }
+    const subSet=new Set((subsD.rows||[]).map(r=>String(r[0])));
     const si=d.cols.indexOf('sub');
-    const mainN=d.rows.filter(r=>String(r[si]).toLowerCase()!=='yes').length;
+    const mainN=d.rows.filter(r=>subSet.size?!subSet.has(String(r[0])):String(r[si]).toLowerCase()!=='yes').length;
     setStatus('live','連携中 ・ 自国メイン'+mainN+'名 ・ 陣営'+kn+'王国 ・ '+new Date().toLocaleString('ja-JP'));
     applyData(d, subsD, camp);
   }catch(e){ setStatus('err','読み込み失敗（'+e.message+'）'); applyData(FALLBACK,SUBS_FALLBACK,CAMP_FALLBACK); }
@@ -450,5 +455,4 @@ $('qClr').onclick=()=>{$('q').value='';onSearch();};
 $('btnReload').onclick=loadData;
 loadData();
 </script>
-</body>
-</html>
+</
