@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2062 KVK20 ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b0f1a;--panel:#141b2c;--panel2:#1b2438;--ink:#e9edf6;--muted:#96a2ba;--line:#263149;
+  --blue:#5b93ff;--green:#3ecf8e;--red:#ff5f70;--amber:#ffb64a;--purple:#a97bff;--teal:#2ed3e0;
+  --grad:linear-gradient(135deg,#5b93ff,#a97bff);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 500px at 70% -10%,#1a2440 0%,var(--bg) 55%) fixed,var(--bg);color:var(--ink);
+  font-family:"Noto Sans JP","Segoe UI",Roboto,Meiryo,sans-serif;font-size:13px;line-height:1.55}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(11,15,26,.82);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:0 18px}
+.topbar .in{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo .mark{width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.logo h1{font-size:15px;margin:0;font-weight:800;letter-spacing:.02em}
+.logo .sub{font-size:10.5px;color:var(--muted);margin-top:1px}
+.badge{margin-left:auto;background:#0d1424;border:1px solid var(--line);padding:4px 12px;border-radius:16px;font-size:11px;color:var(--muted);white-space:nowrap}
+.tabs{max-width:1200px;margin:0 auto;display:flex;gap:6px;overflow-x:auto;padding:0 0 10px}
+.tab{flex:none;padding:8px 16px;border-radius:9px;background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;font-weight:700;font-size:13px;transition:.15s}
+.tab:hover{color:var(--ink);background:var(--panel)}
+.tab.active{background:var(--grad);color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+.statusbar{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)}
+.statusbar .dotc{width:9px;height:9px;border-radius:50%;background:#667;flex:none;box-shadow:0 0 8px rgba(255,255,255,.15)}
+.statusbar.live .dotc{background:var(--green);box-shadow:0 0 8px var(--green)}
+.statusbar.sample .dotc{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.statusbar.err .dotc{background:var(--red);box-shadow:0 0 8px var(--red)}
+.statusbar .reload{margin-left:auto;border:1px solid var(--line);background:#0d1424;color:var(--blue);border-radius:8px;padding:5px 13px;cursor:pointer;font-weight:700}
+.statusbar .reload:hover{border-color:var(--blue)}
+.page{display:none}.page.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,rgba(91,147,255,.10),rgba(169,123,255,.10));
+  border:1px solid #3b4a74;border-radius:13px;padding:14px 16px;margin-bottom:14px}
+.srch-label{font-weight:800;font-size:13.5px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.search input{flex:1;min-width:220px;padding:11px 14px;border-radius:9px;border:1px solid #3b4a74;background:#0d1424;color:#fff;font-size:15px;outline:none}
+.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,147,255,.18)}
+.search .clr{border:1px solid var(--line);background:#0d1424;color:var(--muted);border-radius:9px;padding:9px 14px;cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad)}
+.kpi .l{font-size:11px;color:var(--muted)} .kpi .v{font-size:21px;font-weight:800;margin-top:4px} .kpi .s{font-size:11px;color:var(--muted);margin-top:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.detail-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+.detail-head .nm{font-size:22px;font-weight:800}
+.detail-head .id{color:var(--muted);font-size:12px}
+.pill{font-size:11px;padding:2px 10px;border-radius:11px;font-weight:800}
+.pill.main{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.4)}
+.norm{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.normbox{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:13px}
+.normbox .t{font-size:12px;color:var(--muted);font-weight:700}
+.normbox .big{font-size:26px;font-weight:800;margin:4px 0}
+.bar{height:11px;background:#0d1424;border-radius:7px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:7px}
+.normbox .meta{font-size:11px;color:var(--muted)}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.sb{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.sb .l{font-size:11px;color:var(--muted)} .sb .v{font-size:17px;font-weight:800;margin-top:3px}
+.sb .r{font-size:10px;color:var(--muted);margin-top:2px}
+.metricbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.mbtn{padding:8px 15px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--muted);cursor:pointer;font-weight:700;font-size:12.5px;transition:.15s}
+.mbtn:hover{color:var(--ink);border-color:#3b4a74}
+.mbtn.active{background:var(--grad);color:#fff;border-color:transparent}
+.chart-box{position:relative;height:360px}
+.tbl-wrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:11px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+thead th{position:sticky;top:0;background:#0e1526;color:var(--muted);text-align:right;padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:700;z-index:3}
+thead th:nth-child(1),thead th:nth-child(2){text-align:left}
+tbody td{padding:8px 11px;border-bottom:1px solid #1d2740;text-align:right;white-space:nowrap}
+tbody td:nth-child(1),tbody td:nth-child(2){text-align:left}
+tbody tr:nth-child(even){background:rgba(255,255,255,.015)}
+tbody tr[data-id]:hover{background:#202c48;cursor:pointer}
+.dirtbl thead th{cursor:pointer}
+.rk{display:inline-block;min-width:26px;text-align:center;font-weight:800;border-radius:7px;padding:1px 6px}
+.rk.r1{background:linear-gradient(135deg,#ffd76a,#e2a300);color:#221a00}
+.rk.r2{background:linear-gradient(135deg,#dfe6f2,#9aa8c0);color:#131926}
+.rk.r3{background:linear-gradient(135deg,#f0b184,#b0672e);color:#241100}
+.ok{color:var(--green)} .ng{color:var(--red)} .muted{color:var(--muted)}
+.hint{font-size:11px;color:var(--muted);margin-top:8px}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.numtbl{font-size:14.5px}.numtbl td:first-child{font-weight:700;font-size:13.5px}.numtbl tbody td{padding:12px}.numtbl tbody td:nth-child(2){color:var(--amber);font-size:16px;font-weight:800}
+.stk th:nth-child(1),.stk td:nth-child(1){position:sticky;left:0;z-index:2;min-width:50px;width:50px}
+.stk th:nth-child(2),.stk td:nth-child(2){position:sticky;left:50px;z-index:2;min-width:92px;max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.stk tbody td:nth-child(1),.stk tbody td:nth-child(2){background:var(--panel)}
+.stk thead th:nth-child(1),.stk thead th:nth-child(2){z-index:4}
+.stk tbody tr[data-id]:hover td:nth-child(1),.stk tbody tr[data-id]:hover td:nth-child(2){background:#202c48}
+footer{max-width:1200px;margin:0 auto;padding:6px 16px 22px;text-align:center;color:var(--muted);font-size:11px}
+@media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}.norm{grid-template-columns:1fr}.statgrid{grid-template-columns:repeat(2,1fr)}.chart-box{height:300px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="in">
+    <div class="logo"><div class="mark">&#9876;&#65039;</div>
+      <div><h1>2062 KVK20 オルレアン包囲</h1><div class="sub">貢献度・ノルマ・ランキング・日次推移</div></div>
+    </div>
+    <span class="badge" id="recBadge">—</span>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="search">&#128100; 個人検索</div>
+    <div class="tab" data-tab="rank">&#127942; 王国ランキング</div>
+    <div class="tab" data-tab="camp">&#127760; 陣営ランキング</div>
+    <div class="tab" data-tab="trend">&#128200; 日次推移</div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="statusbar" id="statusbar"><span class="dotc"></span><span id="statusText">読み込み中</span>
+    <button class="reload" id="btnReload">&#8635; 再読み込み</button></div>
+
+  <div class="page active" id="page-search">
+    <div class="search">
+      <span class="srch-label">&#128269; ID / 名前で検索</span>
+      <input id="q" placeholder="総督ID / 名前で検索（例: 48275800 / glonige）">
+      <button class="clr" id="qClr">クリア</button>
+    </div>
+    <div id="detail"></div>
+    <div class="card">
+      <h3>&#128199; メンバー一覧 <span class="muted" style="font-weight:400;font-size:11px">メインのみ・クリックで詳細・ヘッダーで並び替え</span></h3>
+      <div class="tbl-wrap"><table id="dir" class="dirtbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-rank">
+    <div class="kpis" id="kpis"></div>
+    <div class="metricbtns" id="scopebtns"></div>
+    <div class="metricbtns" id="metricbtns"></div>
+    <div class="card"><h3 id="rankTitle">ランキング</h3><div class="chart-box"><canvas id="cRank"></canvas></div></div>
+    <div class="card">
+      <h3>&#128203; ランキング表 <span class="muted" id="rankCount" style="font-weight:400"></span></h3>
+      <div class="tbl-wrap"><table id="rankTbl" class="stk"><thead></thead><tbody></tbody></table></div>
+      <div class="hint" id="rankHint"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-camp">
+    <div class="metricbtns" id="campperiod"></div>
+    <div class="metricbtns" id="campscope"></div>
+    <div class="metricbtns" id="campmetric"></div>
+    <div id="campDetail"></div>
+    <div class="card"><h3 id="campTitle">陣営ランキング</h3><div class="chart-box"><canvas id="cCamp"></canvas></div></div>
+    <div class="card">
+      <h3>&#128203; 陣営ランキング表 <span class="muted" id="campCount" style="font-weight:400"></span></h3>
+      <div class="tbl-wrap"><table id="campTbl" class="stk"><thead></thead><tbody></tbody></table></div>
+      <div class="hint" id="campHint"></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-trend">
+    <div class="kpis" id="trendKpis"></div>
+    <div class="metricbtns" id="trendscope"></div>
+    <div class="metricbtns" id="trendmetric"></div>
+    <div class="card"><h3 id="trendTitle">日次推移</h3><div class="chart-box"><canvas id="cTrend"></canvas></div><div class="hint" id="trendChartHint"></div></div>
+    <div class="card">
+      <h3>&#128197; 日次テーブル <span class="muted" id="trendCount" style="font-weight:400"></span></h3>
+      <div class="tbl-wrap" style="max-height:420px"><table id="trendTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="hint">※ 生データ（メール取込）の王国別合計。取込が無い日は表示されません。</div>
+    </div>
+  </div>
+</div>
+<footer>「再読み込み」で最新化 ・ データ元: Googleスプレッドシート公開CSV</footer>
+<script>
+/* ===== 公開CSV URL（index2 と同じ4本）===== */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=809718978&single=true&output=csv";
+const SUBS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=501324789&single=true&output=csv";
+const CAMP_COMBINED_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=563590891&single=true&output=csv";
+const RAW_DAILY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=1437104797&single=true&output=csv";
+
+/* ===== 最小サンプル（URL未設定・読み込み失敗時のみ表示）===== */
+const FALLBACK={"cols":null,"rows":[
+ ["68439346","しましろう(サンプル)","No",106792787,300000000,0,303592760,1355578,0,1355578,1,18,1,401313675,"101.2%","0.00%"],
+ ["48275800","glonige(サンプル)","No",103174160,300000000,0,224426762,1730748,0,1730341,2,33,2,344607641,"74.8%","0.00%"],
+ ["45172788","虎tärö(サンプル)","No",136992552,450000000,0,393097726,2285940,355044,1930896,3,12,3,489683483,"87.4%","0.00%"],
+ ["102772448","しまじろうさぶ(サンプル)","Yes",40858484,0,0,2164340,60864,56765,0,"","","",2785120,"","0.00%"]]};
+const SUBS_FALLBACK={"cols":["subId","subName","mainId"],"rows":[["102772448","しまじろうさぶ(サンプル)","68439346"]]};
+const CAMP_FALLBACK=[
+ {"id":"68439346","name":"しましろう","power":106987641,"kp":33700840,"dead":2041667,"deadT5":1225000,"deadT4":816667,"kingdom":"自国 2062(サンプル)","period":"全期間"},
+ {"id":"48275800","name":"glonige","power":102648568,"kp":29881320,"dead":1836227,"deadT5":1101736,"deadT4":734491,"kingdom":"自国 2062(サンプル)","period":"全期間"},
+ {"id":"70439346","name":"タロウ","power":71759258,"kp":22603987,"dead":997249,"deadT5":598349,"deadT4":398900,"kingdom":"他国 3011(サンプル)","period":"全期間"},
+ {"id":"51275801","name":"ハナコ","power":127071631,"kp":36990950,"dead":2713179,"deadT5":1627907,"deadT4":1085272,"kingdom":"他国 3025(サンプル)","period":"全期間"}];
+
+/* ===== パース（index2 実証済みロジックを踏襲）===== */
+const COLS=['id','name','targetKPinc','targetDeathCnt','startPower','startKP','startDead','targetKP','targetDeath','firstKP','firstKPrank','firstDead','firstDeadRank','secondKP','secondKPrank','secondDead','secondDeadRank','totalKP','totalDead','totalDeadT4','totalDeadT5','kpRank','deadRank','contribRank','contribPoint','kpNorm','deathNorm','powerCap','sub'];
+const IX={id:0,name:1,sub:2,startPower:3,targetKPinc:4,targetDeathCnt:5,totalKP:6,totalDead:7,totalDeadT4:8,totalDeadT5:9,kpRank:10,deadRank:11,contribRank:12,contribPoint:13,kpNorm:14,deathNorm:15};
+const RANKK=new Set(['firstKPrank','firstDeadRank','secondKPrank','secondDeadRank','kpRank','deadRank','contribRank']);
+const STRK=new Set(['id','name','sub']);
+function parseCSV(text){
+  const rows=[]; let f='',row=[],q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else { if(c==='"')q=true; else if(c===','){row.push(f);f='';}
+      else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}
+      else if(c==='\r'){} else f+=c; } }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function conv(key,v){
+  v=(v==null?'':String(v));
+  if(STRK.has(key)) return v.trim();
+  const t=v.replace(/,/g,'').replace('%','').trim();
+  const n=Number(t);
+  if(RANKK.has(key)) return (t===''||t==='-'||!isFinite(n))?null:n;
+  if(!isFinite(n)) return 0;
+  return n;
+}
+const HDRMAP={'id':'id','ID':'id','name':'name','NAME':'name','Name':'name','sub':'sub',
+  'Start Power':'startPower','撃破数目標値':'targetKPinc','目標死者数':'targetDeathCnt',
+  'Total KP':'totalKP','Total Dead':'totalDead','Total Dead T4':'totalDeadT4','Total Dead T5':'totalDeadT5',
+  'KP Rank':'kpRank','Dead Rank':'deadRank','貢献順位':'contribRank','貢献Point':'contribPoint',
+  '撃破ノルマ達成率':'kpNorm','戦死ノルマ達成率':'deathNorm'};
+function csvToData(text){
+  const arr=parseCSV(text);
+  let map=null;
+  for(const r of arr){
+    const m={}; let hits=0;
+    for(let i=0;i<r.length;i++){ const key=HDRMAP[String(r[i]==null?'':r[i]).trim()]; if(key && !(key in m)){ m[key]=i; hits++; } }
+    if(hits>=6){ map=m; break; }
+  }
+  const recs=[];
+  for(const r of arr){
+    if(!r || !/^\d{4,}$/.test(String(r[0]||'').trim())) continue;
+    recs.push(COLS.map(k=>{ const idx = map ? (k in map ? map[k] : undefined) : IX[k]; return conv(k, idx==null?undefined:r[idx]); }));
+  }
+  if(!recs.length) throw new Error('no rows');
+  return {cols:COLS, rows:recs};
+}
+function subsToData(text){
+  const arr=parseCSV(text), rows=[];
+  for(const r of arr){
+    const sid=String(r[0]||'').trim(), mid=String(r[2]||'').trim();
+    if(!/^\d{4,}$/.test(sid) || !/^\d{4,}$/.test(mid)) continue;
+    rows.push([sid, String(r[1]||'').trim(), mid]);
+  }
+  return {cols:['subId','subName','mainId'], rows};
+}
+function rawToData(text){
+  const arr=parseCSV(text), out=[];
+  for(const r of arr){
+    const id=String(r[0]||'').trim();
+    if(!/^\d{4,}$/.test(id)) continue;
+    const num=x=>Number(String(x==null?'':x).replace(/,/g,''))||0;
+    const dead=num(r[4])+num(r[5])+num(r[6])+num(r[7])+num(r[8]);
+    out.push({id, name:String(r[1]||'').trim(), power:num(r[2]), kp:num(r[9]), dead, deadT5:num(r[4]), deadT4:num(r[5]), kingdom:String(r[17]||'').trim(), period:String(r[18]||'').trim()});
+  }
+  return out;
+}
+function dailyToData(text){
+  const arr=parseCSV(text), out=[];
+  for(const r of arr){
+    const id=String(r[2]||'').trim();
+    if(!/^\d{4,}$/.test(id)) continue;
+    const num=x=>Number(String(x==null?'':x).replace(/,/g,''))||0;
+    const dead=num(r[6])+num(r[7])+num(r[8])+num(r[9])+num(r[10]);
+    out.push({kingdom:String(r[0]||'').trim(), date:String(r[1]||'').trim(), id, name:String(r[3]||'').trim(), power:num(r[4]), kp:num(r[5]), dead});
+  }
+  return out;
+}
+
+/* ===== 状態 ===== */
+let DATA=null, C={}, ROWS=[], MAIN=[], SUBONLY=[], charts={};
+let SUBSMAP={}, SUB2MAIN={}, PMAP={}, dirSort={k:'contribPoint',d:-1};
+let DAILY=[], DAILYMAP={}, HASDAILY=false;
+let KD={}, KDATES=[], KLIST=[];
+let rankScope='main', mainMetric='contrib', subMetric='dead';
+let CAMPROWS=[], campScope='all', campMetric='kp', campPeriod='';
+const CAMP_CAP=200; let campShowAll=false, campNeedsRender=true, trendNeedsRender=true;
+let campSel=null, trendScope='compare', trendMetric='kp';
+const KCOLORS=['#5b93ff','#ff5f70','#ffb64a','#a97bff','#2ed3e0','#ff8a4d','#7f9cf5','#e668b3'];
+const $=id=>document.getElementById(id);
+const yen=n=>Math.round(n||0).toLocaleString('ja-JP');
+const oku=n=>{n=n||0;const a=n/1e8;if(Math.abs(a)>=1)return a.toFixed(a>=100?0:2)+'億';const m=n/1e4;if(Math.abs(m)>=1)return m.toFixed(0)+'万';return yen(n);};
+const pct=n=>(n==null?'-':n.toFixed(1)+'%');
+function setStatus(kind,text){const b=$('statusbar');b.className='statusbar '+kind;$('statusText').textContent=text;}
+function g(r,k){return r[C[k]];}
+function kcolor(k,i){return /自国/.test(k)?'#3ecf8e':KCOLORS[i%KCOLORS.length];}
+function rkCls(i){return i===0?'rk r1':i===1?'rk r2':i===2?'rk r3':'rk';}
+
+function buildSubsMap(subsD){
+  SUBSMAP={}; SUB2MAIN={};
+  (subsD.rows||[]).forEach(r=>{const mid=r[2]; (SUBSMAP[mid]=SUBSMAP[mid]||[]).push({subId:r[0],subName:r[1]}); SUB2MAIN[r[0]]=mid;});
+}
+function buildKingdomDaily(){
+  KD={}; const ds=new Set(), seen={};
+  DAILY.forEach(x=>{
+    if(!x.kingdom||!x.date) return;
+    const key=x.kingdom+'|'+x.id+'|'+x.date;
+    if(seen[key]) return; seen[key]=true;
+    ds.add(x.date);
+    const k=KD[x.kingdom]=KD[x.kingdom]||{};
+    const d=k[x.date]=k[x.date]||{kp:0,dead:0};
+    d.kp+=x.kp; d.dead+=x.dead;
+  });
+  KDATES=[...ds].sort();
+  KLIST=Object.keys(KD).sort((a,b)=>(/自国/.test(b)?1:0)-(/自国/.test(a)?1:0) || a.localeCompare(b,'ja'));
+}
+function applyData(d, subsD, campRows, dailyRows){
+  DATA=d; C={}; DATA.cols.forEach((c,i)=>C[c]=i); ROWS=DATA.rows;
+  PMAP={}; ROWS.forEach(r=>{PMAP[String(g(r,'id'))]=r;});
+  DAILY = dailyRows||[]; HASDAILY = DAILY.length>0; DAILYMAP={};
+  const _dseen={};
+  DAILY.forEach(x=>{const dk=x.id+'|'+x.date; if(_dseen[dk])return; _dseen[dk]=true;
+    (DAILYMAP[x.id]=DAILYMAP[x.id]||[]).push({date:x.date,kp:x.kp,dead:x.dead,power:x.power});});
+  Object.keys(DAILYMAP).forEach(k=>DAILYMAP[k].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0));
+  buildKingdomDaily();
+  buildSubsMap(subsD||SUBS_FALLBACK);
+  const hasSubs=Object.keys(SUB2MAIN).length>0;
+  const isSub=r=>{const id=String(g(r,'id'));
+    if(hasSubs) return Object.prototype.hasOwnProperty.call(SUB2MAIN,id);
+    return String(g(r,'sub')).toLowerCase()==='yes';};
+  MAIN=ROWS.filter(r=>!isSub(r));
+  SUBONLY=ROWS.filter(r=>isSub(r));
+  CAMPROWS = (campRows && campRows.length)? campRows : CAMP_FALLBACK;
+  $('recBadge').textContent='メイン '+MAIN.length+' ／ サブ '+SUBONLY.length;
+  campNeedsRender=true; trendNeedsRender=true;
+  renderDir(); renderRankTab(); renderCampTab(); renderTrendTab(); renderDetail();
+}
+async function fetchCsv(url){
+  const res=await fetch(url+(url.includes('?')?'&':'?')+'cb='+Date.now());
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.text();
+}
+async function loadData(){
+  if(!SHEET_CSV_URL){setStatus('sample','サンプル表示中（CSV URL未設定）');applyData(fbData(),SUBS_FALLBACK,CAMP_FALLBACK,[]);return;}
+  setStatus('','読み込み中');
+  try{
+    const d=csvToData(await fetchCsv(SHEET_CSV_URL));
+    let subsD=SUBS_FALLBACK;
+    if(SUBS_CSV_URL){ try{ subsD=subsToData(await fetchCsv(SUBS_CSV_URL)); }catch(e){ subsD=SUBS_FALLBACK; } }
+    let camp=[], kn=0;
+    if(CAMP_COMBINED_CSV){
+      try{ camp=rawToData(await fetchCsv(CAMP_COMBINED_CSV)).filter(r=>r.kingdom); kn=new Set(camp.map(r=>r.kingdom)).size; }catch(e){}
+    }
+    let daily=[];
+    if(RAW_DAILY_CSV){ try{ daily=dailyToData(await fetchCsv(RAW_DAILY_CSV)); }catch(e){} }
+    const subSet=new Set((subsD.rows||[]).map(r=>String(r[0])));
+    const si=d.cols.indexOf('sub');
+    const mainN=d.rows.filter(r=>subSet.size?!subSet.has(String(r[0])):String(r[si]).toLowerCase()!=='yes').length;
+    setStatus('live','連携中 ・ 自国メイン'+mainN+'名 ・ 陣営'+kn+'王国 ・ '+new Date().toLocaleString('ja-JP'));
+    applyData(d, subsD, camp, daily);
+  }catch(e){ setStatus('err','読み込み失敗（'+e.message+'）→サンプル表示'); applyData(fbData(),SUBS_FALLBACK,CAMP_FALLBACK,[]); }
+}
+function fbData(){
+  // 16列サンプルを29列フォーマットに変換
+  const rows=FALLBACK.rows.map(r=>COLS.map(k=>conv(k, k in IX ? r[IX[k]] : undefined)));
+  return {cols:COLS, rows};
+}
+
+/* ===== 個人検索タブ ===== */
+const DIRCOLS=[['name','名前'],['id','ID'],['contribPoint','貢献P'],['totalKP','撃破P'],['totalDead','戦死'],['kpNorm','撃破ノルマ']];
+function renderDir(){
+  const q=$('q').value.trim().toLowerCase();
+  let list=MAIN.filter(r=> !q || String(g(r,'id')).includes(q) || String(g(r,'name')).toLowerCase().includes(q));
+  list=[...list].sort((a,b)=>{const av=g(a,dirSort.k),bv=g(b,dirSort.k);
+    if(typeof av==='string')return av.localeCompare(bv)*dirSort.d*-1; return ((av==null?-1:av)-(bv==null?-1:bv))*dirSort.d;});
+  const th=$('dir').querySelector('thead');
+  th.innerHTML='<tr>'+DIRCOLS.map(([k,l])=>`<th data-k="${k}">${l}${dirSort.k===k?(dirSort.d<0?' ▼':' ▲'):''}</th>`).join('')+'</tr>';
+  th.querySelectorAll('th').forEach(t=>t.onclick=()=>{const k=t.dataset.k;if(dirSort.k===k)dirSort.d*=-1;else{dirSort.k=k;dirSort.d=-1;}renderDir();});
+  $('dir').querySelector('tbody').innerHTML=list.map(r=>`<tr data-id="${g(r,'id')}"><td>${g(r,'name')}</td><td>${g(r,'id')}</td><td>${oku(g(r,'contribPoint'))}</td><td>${oku(g(r,'totalKP'))}</td><td>${oku(g(r,'totalDead'))}</td><td class="${g(r,'kpNorm')>=100?'ok':'ng'}">${pct(g(r,'kpNorm'))}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">該当なし</td></tr>';
+  $('dir').querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>{$('q').value=tr.dataset.id;onSearch();});
+}
+function bars(v,max,color){const w=Math.max(0,Math.min(100,(v/max)*100));return `<div class="bar"><i style="width:${w}%;background:${color}"></i></div>`;}
+function renderDetail(){
+  const q=$('q').value.trim(), det=$('detail');
+  if(!q){det.innerHTML='';return;}
+  const hit=MAIN.filter(r=>String(g(r,'id'))===q);
+  const list = hit.length?hit : MAIN.filter(r=>String(g(r,'name')).toLowerCase()===q.toLowerCase());
+  if(list.length!==1){det.innerHTML='';return;}
+  const r=list[0], N=MAIN.length;
+  const dseries=DAILYMAP[String(g(r,'id'))]||[], useRaw=dseries.length>0;
+  const dispKP = useRaw ? dseries.reduce((a,x)=>a+(x.kp||0),0) : g(r,'totalKP');
+  const dispDead = useRaw ? dseries.reduce((a,x)=>a+(x.dead||0),0) : g(r,'totalDead');
+  const srcNote = useRaw ? '生データ集計' : 'ポータル集計';
+  const tgtKP = g(r,'targetKPinc');
+  const kpN = useRaw ? (tgtKP>0 ? dispKP/tgtKP*100 : g(r,'kpNorm')) : g(r,'kpNorm');
+  const dN=g(r,'deathNorm');
+  const kpColor=kpN>=100?'var(--green)':'var(--red)', dColor=dN>=100?'var(--green)':'var(--amber)';
+  const numHtml=`<h3 style="margin-top:18px">\u{1F4CA} 合計（撃破・戦死）<span class="muted" style="font-weight:400;font-size:11px">単位なしの実数 ・ ${srcNote}</span></h3>
+    <div class="tbl-wrap" style="max-height:none"><table class="numtbl">
+      <thead><tr><th>区分</th><th>計</th></tr></thead>
+      <tbody>
+        <tr><td>⚔️ 撃破ポイント</td><td><b>${yen(dispKP)}</b></td></tr>
+        <tr><td>\u{1F480} 戦死数</td><td><b>${yen(dispDead)}</b></td></tr>
+      </tbody></table></div>`;
+  const subs=SUBSMAP[String(g(r,'id'))]||[];
+  let subsHtml='';
+  if(subs.length){
+    let totDead=0, joined=0;
+    const rowsHtml=subs.map(s=>{
+      const pr=PMAP[s.subId];
+      const latest = pr? g(pr,'name') : s.subName;
+      const dead = pr? g(pr,'totalDead') : null;
+      const pw   = pr? g(pr,'startPower') : null;
+      if(pr){joined++; totDead+=(dead||0);}
+      return `<tr><td>${latest}${pr?'':' <span class="muted" style="font-size:10px">(登録名)</span>'}</td><td class="muted">${s.subId}</td><td>${pr?'<span class="ok">参加</span>':'<span class="muted">―</span>'}</td><td>${pw!=null?oku(pw):'-'}</td><td>${dead!=null?oku(dead):'-'}</td></tr>`;
+    }).join('');
+    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント（${subs.length}） <span class="muted" style="font-weight:400;font-size:12px">参加 ${joined} ／ サブ戦死合計 ${oku(totDead)}</span></h3><div class="tbl-wrap" style="max-height:300px"><table><thead><tr><th>サブ名(最新)</th><th>サブID</th><th>参加</th><th>戦力</th><th>戦死</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="hint">最新名はポータルのIDから取得。未参加は登録時の名前を表示。</div>`;
+  } else {
+    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント</h3><div class="hint">このメインに紐づくサブ登録はありません。</div>`;
+  }
+  det.innerHTML=`<div class="card"><div class="detail-head"><span class="nm">${g(r,'name')}</span><span class="id">ID: ${g(r,'id')}</span><span class="pill main">MAIN</span><span class="id">開始戦力 ${oku(g(r,'startPower'))}</span></div>
+    <div class="norm"><div class="normbox"><div class="t">⚔️ 撃破ノルマ達成率</div><div class="big" style="color:${kpColor}">${pct(kpN)}</div>${bars(kpN,Math.max(150,kpN),kpColor)}<div class="meta">獲得 ${yen(dispKP)} / 目標 ${yen(tgtKP)}</div></div>
+    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率</div><div class="big" style="color:${g(r,'targetDeathCnt')>0?dColor:'var(--muted)'}">${g(r,'targetDeathCnt')>0?pct(dN):'対象外'}</div>${g(r,'targetDeathCnt')>0?bars(dN,Math.max(100,dN||1),dColor):''}<div class="meta">戦死 ${yen(dispDead)}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${g(r,'targetDeathCnt')>0?yen(g(r,'targetDeathCnt')):'なし'}</div></div></div>
+    <div class="statgrid"><div class="sb"><div class="l">貢献順位</div><div class="v">${g(r,'contribRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">貢献Point ${oku(g(r,'contribPoint'))}</div></div>
+    <div class="sb"><div class="l">撃破順位</div><div class="v">${g(r,'kpRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total KP ${yen(dispKP)}</div></div>
+    <div class="sb"><div class="l">戦死順位</div><div class="v">${g(r,'deadRank')??'-'} <span class="muted" style="font-size:12px">/ ${N}</span></div><div class="r">Total Dead ${yen(dispDead)}</div></div>
+    <div class="sb"><div class="l">撃破ノルマ判定</div><div class="v">${kpN>=100?'達成':'未達'}</div><div class="r">${kpN>=100?'':'未達ペナルティ対象'}</div></div></div>
+    ${numHtml}
+    <h3 style="margin-top:18px">\u{1F4C8} 日次 撃破・戦死 推移 <span class="muted" style="font-weight:400;font-size:11px">各日=棒 / 累計=線 ・ 撃破=左軸 / 戦死=右軸</span></h3><div class="chart-box" style="height:300px"><canvas id="cDetail"></canvas></div><div class="hint" id="detailChartHint"></div>
+    ${subsHtml}</div>`;
+  drawDetailChart(r);
+}
+function drawDetailChart(r){
+  if(charts.cDetail)charts.cDetail.destroy();
+  const series=DAILYMAP[String(g(r,'id'))]||[];
+  const hint=$('detailChartHint');
+  if(hint) hint.textContent = series.length? '' : '※ この総督の日次データがありません（生データに未取込）';
+  const labels=series.map(x=>x.date.slice(5).replace('-','/'));
+  let ck=0,cd=0; const cumKP=[],cumDead=[];
+  const dayKP=series.map(x=>x.kp), dayDead=series.map(x=>x.dead);
+  series.forEach(x=>{ck+=x.kp;cd+=x.dead;cumKP.push(ck);cumDead.push(cd);});
+  charts.cDetail=new Chart($('cDetail'),{
+    data:{labels,datasets:[
+      {type:'bar',label:'撃破/日',data:dayKP,backgroundColor:'#5b93ff',borderRadius:3,yAxisID:'y',order:3},
+      {type:'line',label:'撃破累計',data:cumKP,borderColor:'#9dbcff',backgroundColor:'#9dbcff',yAxisID:'y',tension:.3,pointRadius:2,borderWidth:2,order:1},
+      {type:'bar',label:'戦死/日',data:dayDead,backgroundColor:'#ff5f70',borderRadius:3,yAxisID:'y2',order:4},
+      {type:'line',label:'戦死累計',data:cumDead,borderColor:'#ffb64a',backgroundColor:'#ffb64a',yAxisID:'y2',tension:.3,pointRadius:2,borderWidth:2,order:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#96a2ba'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+      scales:{x:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}},
+        y:{position:'left',title:{display:true,text:'撃破',color:'#5b93ff'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{color:'#263149'}},
+        y2:{position:'right',title:{display:true,text:'戦死',color:'#ff5f70'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{drawOnChartArea:false}}}}});
+}
+function onSearch(){renderDir();renderDetail();}
+
+/* ===== 王国ランキングタブ ===== */
+const METRICS={
+  contrib:{label:'貢献度Point',key:'contribPoint',color:'#a97bff',fmt:oku,isNorm:false},
+  kp:{label:'撃破ポイント',key:'totalKP',color:'#5b93ff',fmt:oku,isNorm:false},
+  dead:{label:'戦死数',key:'totalDead',color:'#ff5f70',fmt:oku,isNorm:false},
+  norm:{label:'ノルマ達成率',key:'kpNorm',color:'#3ecf8e',fmt:pct,isNorm:true}
+};
+const SUBMETRICS={
+  dead:{label:'戦死数',key:'totalDead',color:'#ff5f70',fmt:oku,isNorm:false},
+  kp:{label:'撃破ポイント',key:'totalKP',color:'#5b93ff',fmt:oku,isNorm:false}
+};
+function curSet(){return rankScope==='sub'?SUBMETRICS:METRICS;}
+function curKey(){return rankScope==='sub'?subMetric:mainMetric;}
+function curList(){return rankScope==='sub'?SUBONLY:MAIN;}
+function renderKPIs(){
+  const n=MAIN.length;
+  const avgNorm=n?MAIN.reduce((a,r)=>a+(g(r,'kpNorm')||0),0)/n:0;
+  const achieved=MAIN.filter(r=>g(r,'kpNorm')>=100).length;
+  const items=[
+    ['メイン / サブ', MAIN.length+' / '+SUBONLY.length,'対象人数'],
+    ['撃破ノルマ平均', avgNorm.toFixed(1)+'%', achieved+' 名達成'],
+    ['総撃破ポイント', oku(MAIN.reduce((a,r)=>a+(g(r,'totalKP')||0),0)),'メイン合計'],
+    ['総戦死数', oku(ROWS.reduce((a,r)=>a+(g(r,'totalDead')||0),0)),'全体合計'],
+  ];
+  $('kpis').innerHTML=items.map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+}
+function renderScopeBtns(){
+  const scopes=[['main','メイン'],['sub','サブのみ']];
+  $('scopebtns').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">対象:</span>'+scopes.map(([k,l])=>`<div class="mbtn ${k===rankScope?'active':''}" data-s="${k}">${l}（${k==='sub'?SUBONLY.length:MAIN.length}）</div>`).join('');
+  $('scopebtns').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{rankScope=b.dataset.s; renderRankTab();});
+}
+function renderMetricBtns(){
+  const set=curSet(), cur=curKey();
+  $('metricbtns').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">並び替え:</span>'+Object.entries(set).map(([k,m])=>`<div class="mbtn ${k===cur?'active':''}" data-m="${k}">${m.label}順</div>`).join('');
+  $('metricbtns').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{if(rankScope==='sub')subMetric=b.dataset.m;else mainMetric=b.dataset.m;renderMetricBtns();renderRanking();});
+}
+function renderRanking(){
+  const set=curSet(), m=set[curKey()], list=curList();
+  const sorted=[...list].sort((a,b)=>(g(b,m.key)||0)-(g(a,m.key)||0));
+  $('rankTitle').textContent=(rankScope==='sub'?'サブのみ ':'メイン ')+m.label+' TOP20';
+  const top=sorted.slice(0,20);
+  if(charts.cRank)charts.cRank.destroy();
+  charts.cRank=new Chart($('cRank'),{type:'bar',
+    data:{labels:top.map(r=>g(r,'name')),datasets:[{data:top.map(r=>g(r,m.key)||0),backgroundColor:m.color,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>m.fmt(c.raw)}}},
+      scales:{x:{ticks:{color:'#96a2ba',callback:v=>m.isNorm?v+'%':oku(v)},grid:{color:'#263149'}},
+        y:{ticks:{color:'#96a2ba',font:{size:11}},grid:{display:false}}}}});
+  const th=$('rankTbl').querySelector('thead'), tb=$('rankTbl').querySelector('tbody');
+  if(rankScope==='sub'){
+    th.innerHTML='<tr><th>順位</th><th>名前</th><th>所属メイン</th><th>戦死</th><th>撃破P</th></tr>';
+    tb.innerHTML=sorted.map((r,i)=>{const mid=SUB2MAIN[String(g(r,'id'))]; const mn=(mid&&PMAP[mid])?g(PMAP[mid],'name'):(mid||'-');
+      return `<tr><td><span class="${rkCls(i)}">${i+1}</span></td><td>${g(r,'name')}</td><td class="muted">${mn}</td><td><b>${oku(g(r,'totalDead'))}</b></td><td>${oku(g(r,'totalKP'))}</td></tr>`;}).join('') || '<tr><td colspan="5" class="empty">サブのデータがありません</td></tr>';
+    $('rankHint').textContent='※ サブアカウントのみ。並び替えは上のボタンで切替。';
+  } else {
+    th.innerHTML='<tr><th>順位</th><th>名前</th><th>'+m.label+'</th><th>撃破ノルマ</th><th>戦死</th><th>貢献P</th></tr>';
+    tb.innerHTML=sorted.map((r,i)=>{const norm=g(r,'kpNorm');
+      return `<tr data-id="${g(r,'id')}"><td><span class="${rkCls(i)}">${i+1}</span></td><td>${g(r,'name')}</td><td><b>${m.fmt(g(r,m.key))}</b></td><td class="${norm>=100?'ok':'ng'}">${pct(norm)}</td><td>${oku(g(r,'totalDead'))}</td><td>${oku(g(r,'contribPoint'))}</td></tr>`;}).join('');
+    tb.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{switchTab('search');$('q').value=tr.dataset.id;onSearch();});
+    $('rankHint').textContent='※ 行クリックで個人ページへ。100%未満（赤）は撃破ノルマ未達。';
+  }
+  $('rankCount').textContent='（'+(rankScope==='sub'?'サブ '+SUBONLY.length:'メイン '+MAIN.length)+' 名）';
+}
+function renderRankTab(){renderKPIs();renderScopeBtns();renderMetricBtns();renderRanking();}
+
+/* ===== 陣営ランキングタブ ===== */
+const CAMPMET={kp:{label:'撃破ポイント',key:'kp',color:'#5b93ff'},dead:{label:'戦死数',key:'dead',color:'#ff5f70'}};
+function campKingdoms(){return [...new Set(CAMPROWS.map(r=>r.kingdom).filter(Boolean))];}
+function campPeriodsList(){return [...new Set(CAMPROWS.map(r=>r.period).filter(Boolean))];}
+function renderCampPeriodBtns(){
+  const ps=campPeriodsList(), el=$('campperiod');
+  if(ps.length<=1){ el.innerHTML=''; campPeriod=ps[0]||''; return; }
+  const order=['全期間','1st','2nd']; ps.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  if(!ps.includes(campPeriod)) campPeriod = ps.includes('全期間')?'全期間':ps[0];
+  el.innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">期間:</span>'+ps.map(p=>`<div class="mbtn ${p===campPeriod?'active':''}" data-p="${p}">${p}</div>`).join('');
+  el.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campPeriod=b.dataset.p;renderCampPeriodBtns();campShowAll=false;renderCamp();});
+}
+function renderCampScopeBtns(){
+  const ks=campKingdoms();
+  const btns=[['all','全体（自国＋他国）']].concat(ks.map(k=>[k,k]));
+  if(!btns.some(b=>b[0]===campScope)) campScope='all';
+  $('campscope').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">王国:</span>'+btns.map(([v,l])=>`<div class="mbtn ${v===campScope?'active':''}" data-c="${v}">${l}</div>`).join('');
+  $('campscope').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campScope=b.dataset.c;renderCampScopeBtns();campShowAll=false;renderCamp();});
+}
+function renderCampMetricBtns(){
+  $('campmetric').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">並び替え:</span>'+Object.entries(CAMPMET).map(([k,m])=>`<div class="mbtn ${k===campMetric?'active':''}" data-m="${k}">${m.label}順</div>`).join('');
+  $('campmetric').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{campMetric=b.dataset.m;renderCampMetricBtns();campShowAll=false;renderCamp();});
+}
+function renderCamp(){
+  const m=CAMPMET[campMetric];
+  let list=CAMPROWS; if(campPeriod) list=list.filter(r=>r.period===campPeriod); if(campScope!=='all') list=list.filter(r=>r.kingdom===campScope);
+  const sorted=[...list].sort((a,b)=>(b[m.key]||0)-(a[m.key]||0));
+  $('campTitle').textContent=(campScope==='all'?'全体（自国＋他国）':campScope)+' ／ '+m.label+' TOP20';
+  const top=sorted.slice(0,20);
+  if(charts.cCamp)charts.cCamp.destroy();
+  charts.cCamp=new Chart($('cCamp'),{type:'bar',
+    data:{labels:top.map(r=>r.name),datasets:[{data:top.map(r=>r[m.key]||0),backgroundColor:top.map(r=>/自国/.test(r.kingdom)?'#3ecf8e':m.color),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>oku(c.raw)+'（'+top[c.dataIndex].kingdom+'）'}}},
+      scales:{x:{ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{color:'#263149'}},y:{ticks:{color:'#96a2ba',font:{size:11}},grid:{display:false}}}}});
+  const th=$('campTbl').querySelector('thead'), tb=$('campTbl').querySelector('tbody');
+  th.innerHTML='<tr><th>順位</th><th>名前</th><th>王国</th><th>撃破P</th><th>戦死</th></tr>';
+  const capped = !campShowAll && sorted.length>CAMP_CAP;
+  const view = capped ? sorted.slice(0,CAMP_CAP) : sorted;
+  tb.innerHTML=view.map((r,i)=>{const self=/自国/.test(r.kingdom);
+    const kpC=campMetric==='kp'?`<b>${oku(r.kp)}</b>`:oku(r.kp);
+    const dC=campMetric==='dead'?`<b>${oku(r.dead)}</b>`:oku(r.dead);
+    return `<tr data-id="${r.id}" data-k="${r.kingdom}"><td><span class="${rkCls(i)}">${i+1}</span></td><td>${r.name}</td><td class="${self?'ok':'muted'}">${r.kingdom}</td><td>${kpC}</td><td>${dC}</td></tr>`;}).join('') || '<tr><td colspan="5" class="empty">陣営データがありません（CSV設定後に表示）</td></tr>';
+  tb.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>{campSel={id:tr.dataset.id,kingdom:tr.dataset.k};renderCampDetail();});
+  $('campCount').textContent='（'+(campScope==='all'?'全'+campKingdoms().length+'王国':campScope)+' ・ '+sorted.length+'名'+(capped?' ／ 上位'+CAMP_CAP+'表示':'')+'）';
+  const btn = capped
+    ? ` <button id="campMore" style="background:#0d1424;border:1px solid var(--line);color:var(--blue);border-radius:7px;padding:3px 10px;cursor:pointer;font-weight:600">全${sorted.length}件を表示（重い）</button>`
+    : (campShowAll && sorted.length>CAMP_CAP ? ` <button id="campLess" style="background:#0d1424;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:3px 10px;cursor:pointer">上位${CAMP_CAP}件に戻す</button>` : '');
+  $('campHint').innerHTML='※ 緑=自国。行クリックで個人カード。既定は上位'+CAMP_CAP+'件表示。'+btn;
+  const mb=$('campMore'); if(mb) mb.onclick=()=>{campShowAll=true;renderCamp();};
+  const lb=$('campLess'); if(lb) lb.onclick=()=>{campShowAll=false;renderCamp();};
+}
+function renderCampDetail(){
+  const el=$('campDetail');
+  if(!campSel){ el.innerHTML=''; return; }
+  const rows=CAMPROWS.filter(r=>String(r.id)===String(campSel.id)&&r.kingdom===campSel.kingdom);
+  if(!rows.length){ el.innerHTML=''; campSel=null; return; }
+  const r0=rows[0];
+  const self=/自国/.test(r0.kingdom);
+  el.innerHTML=`<div class="card"><div class="detail-head" style="border:none;padding-bottom:0;margin-bottom:0">
+      <span class="nm">${r0.name}</span>
+      <span class="id">ID: ${r0.id} ／ 王国 <span class="${self?'ok':'muted'}">${r0.kingdom}</span></span>
+      <button onclick="campSel=null;renderCampDetail()" style="margin-left:auto;background:#0d1424;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 12px;cursor:pointer">✕ 閉じる</button>
+    </div>
+    <div class="statgrid">
+      <div class="sb"><div class="l">戦力（開始時）</div><div class="v" style="font-size:15px">${oku(r0.power)}</div></div>
+      <div class="sb"><div class="l">撃破ポイント</div><div class="v" style="font-size:15px">${oku(r0.kp)}</div></div>
+      <div class="sb"><div class="l">戦死数</div><div class="v" style="font-size:15px">${oku(r0.dead)}</div><div class="r">T5 ${oku(r0.deadT5)} / T4 ${oku(r0.deadT4)}</div></div>
+      <div class="sb"><div class="l">期間</div><div class="v" style="font-size:15px">${r0.period||'全期間'}</div></div>
+    </div></div>`;
+}
+function renderCampTab(){
+  renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();
+  if($('page-camp').classList.contains('active')){ renderCamp();renderCampDetail(); campNeedsRender=false; }
+  else { campNeedsRender=true; }
+}
+
+/* ===== 日次推移タブ（王国全体・新機能）===== */
+const TRENDMET={kp:{label:'撃破ポイント',key:'kp',color:'#5b93ff'},dead:{label:'戦死数',key:'dead',color:'#ff5f70'}};
+function renderTrendKpis(){
+  const m=TRENDMET[trendMetric];
+  const total=KLIST.reduce((a,k)=>a+KDATES.reduce((b,d)=>b+((KD[k][d]||{})[m.key]||0),0),0);
+  const items=[
+    ['取込日数', KDATES.length+' 日', KDATES.length?KDATES[0].slice(5)+' 〜 '+KDATES[KDATES.length-1].slice(5):'—'],
+    ['最新取込日', KDATES.length?KDATES[KDATES.length-1]:'—','生データ最終日'],
+    ['対象王国', KLIST.length+' 王国','自国＋他国'],
+    ['全体累計'+m.label.slice(0,2), oku(total),'全王国合計'],
+  ];
+  $('trendKpis').innerHTML=items.map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+}
+function renderTrendScopeBtns(){
+  const btns=[['compare','全王国 比較']].concat(KLIST.map(k=>[k,k]));
+  if(!btns.some(b=>b[0]===trendScope)) trendScope='compare';
+  $('trendscope').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">表示:</span>'+btns.map(([v,l])=>`<div class="mbtn ${v===trendScope?'active':''}" data-t="${v}">${l}</div>`).join('');
+  $('trendscope').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{trendScope=b.dataset.t;renderTrendScopeBtns();renderTrend();});
+}
+function renderTrendMetricBtns(){
+  $('trendmetric').innerHTML='<span class="muted" style="font-size:12px;margin-right:2px">指標:</span>'+Object.entries(TRENDMET).map(([k,m])=>`<div class="mbtn ${k===trendMetric?'active':''}" data-m="${k}">${m.label}</div>`).join('');
+  $('trendmetric').querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{trendMetric=b.dataset.m;renderTrendMetricBtns();renderTrendKpis();renderTrend();});
+}
+function renderTrend(){
+  const m=TRENDMET[trendMetric];
+  if(charts.cTrend)charts.cTrend.destroy();
+  const hint=$('trendChartHint');
+  if(!KDATES.length){
+    $('trendTitle').textContent='日次推移';
+    if(hint) hint.textContent='※ 生データCSVが読み込めていません（RAW_DAILY_CSV / 公開設定を確認）。';
+    $('trendTbl').querySelector('thead').innerHTML='';
+    $('trendTbl').querySelector('tbody').innerHTML='<tr><td class="empty">日次データがありません</td></tr>';
+    $('trendCount').textContent='';
+    return;
+  }
+  if(hint) hint.textContent='';
+  const labels=KDATES.map(d=>d.slice(5).replace('-','/'));
+  const th=$('trendTbl').querySelector('thead'), tb=$('trendTbl').querySelector('tbody');
+  if(trendScope==='compare'){
+    $('trendTitle').textContent='全王国 比較 ／ '+m.label+'（累計）';
+    const ds=KLIST.map((k,i)=>{
+      let c=0; const data=KDATES.map(d=>{c+=((KD[k][d]||{})[m.key]||0);return c;});
+      return {type:'line',label:k,data,borderColor:kcolor(k,i),backgroundColor:kcolor(k,i),tension:.3,pointRadius:2,borderWidth:2.5};
+    });
+    charts.cTrend=new Chart($('cTrend'),{data:{labels,datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#96a2ba'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+        scales:{x:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}},
+          y:{ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{color:'#263149'},title:{display:true,text:m.label+'（累計）',color:'#96a2ba'}}}}});
+    th.innerHTML='<tr><th>日付</th>'+KLIST.map(k=>`<th class="${/自国/.test(k)?'ok':''}">${k}</th>`).join('')+'</tr>';
+    tb.innerHTML=KDATES.map(d=>'<tr><td>'+d+'</td>'+KLIST.map(k=>{const v=(KD[k][d]||{})[m.key];return '<td>'+(v==null?'<span class="muted">―</span>':oku(v))+'</td>';}).join('')+'</tr>').join('');
+    $('trendCount').textContent='（'+m.label+'／日次値・'+KDATES.length+'日）';
+  } else {
+    const k=trendScope;
+    $('trendTitle').textContent=k+' ／ 撃破・戦死 日次推移';
+    const dayKP=KDATES.map(d=>(KD[k][d]||{}).kp||0), dayDead=KDATES.map(d=>(KD[k][d]||{}).dead||0);
+    let ck=0,cd=0; const cumKP=dayKP.map(v=>ck+=v), cumDead=dayDead.map(v=>cd+=v);
+    charts.cTrend=new Chart($('cTrend'),{
+      data:{labels,datasets:[
+        {type:'bar',label:'撃破/日',data:dayKP,backgroundColor:'#5b93ff',borderRadius:3,yAxisID:'y',order:3},
+        {type:'line',label:'撃破累計',data:cumKP,borderColor:'#9dbcff',backgroundColor:'#9dbcff',yAxisID:'y',tension:.3,pointRadius:2,borderWidth:2,order:1},
+        {type:'bar',label:'戦死/日',data:dayDead,backgroundColor:'#ff5f70',borderRadius:3,yAxisID:'y2',order:4},
+        {type:'line',label:'戦死累計',data:cumDead,borderColor:'#ffb64a',backgroundColor:'#ffb64a',yAxisID:'y2',tension:.3,pointRadius:2,borderWidth:2,order:2}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#96a2ba'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+        scales:{x:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}},
+          y:{position:'left',title:{display:true,text:'撃破',color:'#5b93ff'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{color:'#263149'}},
+          y2:{position:'right',title:{display:true,text:'戦死',color:'#ff5f70'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{drawOnChartArea:false}}}}});
+    th.innerHTML='<tr><th>日付</th><th>撃破/日</th><th>撃破累計</th><th>戦死/日</th><th>戦死累計</th></tr>';
+    tb.innerHTML=KDATES.map((d,i)=>`<tr><td>${d}</td><td>${oku(dayKP[i])}</td><td>${oku(cumKP[i])}</td><td>${oku(dayDead[i])}</td><td>${oku(cumDead[i])}</td></tr>`).join('');
+    $('trendCount').textContent='（'+k+' ・ '+KDATES.length+'日）';
+  }
+}
+function renderTrendTab(){
+  renderTrendKpis();renderTrendScopeBtns();renderTrendMetricBtns();
+  if($('page-trend').classList.contains('active')){ renderTrend(); trendNeedsRender=false; }
+  else { trendNeedsRender=true; }
+}
+
+/* ===== タブ切替 ===== */
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $('page-'+t).classList.add('active');
+  if(t==='camp'){
+    if(campNeedsRender){ renderCamp(); renderCampDetail(); campNeedsRender=false; }
+    else { if(charts.cCamp)charts.cCamp.resize(); }
+  } else if(t==='trend'){
+    if(trendNeedsRender){ renderTrend(); trendNeedsRender=false; }
+    else { if(charts.cTrend)charts.cTrend.resize(); }
+  } else if(t==='rank'){ if(charts.cRank)charts.cRank.resize(); }
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+$('q').addEventListener('input',onSearch);
+$('qClr').onclick=()=>{$('q').value='';onSearch();};
+$('btnReload').onclick=loadData;
+loadData();
+</script>
+</body>
+</html>
