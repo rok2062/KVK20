@@ -37,11 +37,12 @@ body{margin:0;background:radial-gradient(1200px 500px at 70% -10%,#1a2440 0%,var
 .statusbar .reload:hover{border-color:var(--blue)}
 .page{display:none}.page.active{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,rgba(91,147,255,.10),rgba(169,123,255,.10));
-  border:1px solid #3b4a74;border-radius:13px;padding:14px 16px;margin-bottom:14px}
-.srch-label{font-weight:800;font-size:13.5px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.search input{flex:1;min-width:220px;padding:11px 14px;border-radius:9px;border:1px solid #3b4a74;background:#0d1424;color:#fff;font-size:15px;outline:none}
-.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,147,255,.18)}
+.search{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:linear-gradient(135deg,rgba(255,182,74,.16),rgba(255,140,40,.08));
+  border:2px solid var(--amber);border-radius:13px;padding:15px 16px;margin-bottom:14px;box-shadow:0 0 0 3px rgba(255,182,74,.14)}
+.srch-label{font-weight:800;font-size:14px;color:var(--amber)}
+.search input{flex:1;min-width:220px;padding:11px 14px;border-radius:9px;border:1.5px solid var(--amber);background:#1a1408;color:#fff;font-size:15px;outline:none}
+.search input::placeholder{color:#a08a5e}
+.search input:focus{border-color:#ffd280;box-shadow:0 0 0 3px rgba(255,182,74,.3)}
 .search .clr{border:1px solid var(--line);background:#0d1424;color:var(--muted);border-radius:9px;padding:9px 14px;cursor:pointer}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative;overflow:hidden}
@@ -144,8 +145,8 @@ footer{max-width:1200px;margin:0 auto;padding:6px 16px 22px;text-align:center;co
     <div class="metricbtns" id="campperiod"></div>
     <div class="metricbtns" id="campscope"></div>
     <div class="metricbtns" id="campmetric"></div>
-    <div id="campDetail"></div>
     <div class="card"><h3 id="campTitle">陣営ランキング</h3><div class="chart-box"><canvas id="cCamp"></canvas></div></div>
+    <div id="campDetail"></div>
     <div class="card">
       <h3>&#128203; 陣営ランキング表 <span class="muted" id="campCount" style="font-weight:400"></span></h3>
       <div class="tbl-wrap"><table id="campTbl" class="stk"><thead></thead><tbody></tbody></table></div>
@@ -551,28 +552,50 @@ function renderCamp(){
   const btn = capped
     ? ` <button id="campMore" style="background:#0d1424;border:1px solid var(--line);color:var(--blue);border-radius:7px;padding:3px 10px;cursor:pointer;font-weight:600">全${sorted.length}件を表示（重い）</button>`
     : (campShowAll && sorted.length>CAMP_CAP ? ` <button id="campLess" style="background:#0d1424;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:3px 10px;cursor:pointer">上位${CAMP_CAP}件に戻す</button>` : '');
-  $('campHint').innerHTML='※ 緑=自国。行クリックで個人カード。既定は上位'+CAMP_CAP+'件表示。'+btn;
+  $('campHint').innerHTML='※ 緑=自国。行クリックで上に日次推移カードを表示。既定は上位'+CAMP_CAP+'件表示。'+btn;
   const mb=$('campMore'); if(mb) mb.onclick=()=>{campShowAll=true;renderCamp();};
   const lb=$('campLess'); if(lb) lb.onclick=()=>{campShowAll=false;renderCamp();};
 }
 function renderCampDetail(){
   const el=$('campDetail');
+  if(charts.cCampDetail){charts.cCampDetail.destroy();charts.cCampDetail=null;}
   if(!campSel){ el.innerHTML=''; return; }
   const rows=CAMPROWS.filter(r=>String(r.id)===String(campSel.id)&&r.kingdom===campSel.kingdom);
   if(!rows.length){ el.innerHTML=''; campSel=null; return; }
   const r0=rows[0];
   const self=/自国/.test(r0.kingdom);
-  el.innerHTML=`<div class="card"><div class="detail-head" style="border:none;padding-bottom:0;margin-bottom:0">
+  const series=DAILYMAP[String(r0.id)]||[];
+  el.innerHTML=`<div class="card" style="border-color:#3b4a74"><div class="detail-head">
       <span class="nm">${r0.name}</span>
       <span class="id">ID: ${r0.id} ／ 王国 <span class="${self?'ok':'muted'}">${r0.kingdom}</span></span>
       <button onclick="campSel=null;renderCampDetail()" style="margin-left:auto;background:#0d1424;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 12px;cursor:pointer">✕ 閉じる</button>
     </div>
-    <div class="statgrid">
+    <div class="statgrid" style="margin-top:0">
       <div class="sb"><div class="l">戦力（開始時）</div><div class="v" style="font-size:15px">${oku(r0.power)}</div></div>
       <div class="sb"><div class="l">撃破ポイント</div><div class="v" style="font-size:15px">${oku(r0.kp)}</div></div>
       <div class="sb"><div class="l">戦死数</div><div class="v" style="font-size:15px">${oku(r0.dead)}</div><div class="r">T5 ${oku(r0.deadT5)} / T4 ${oku(r0.deadT4)}</div></div>
       <div class="sb"><div class="l">期間</div><div class="v" style="font-size:15px">${r0.period||'全期間'}</div></div>
-    </div></div>`;
+    </div>
+    <h3 style="margin-top:14px">\u{1F4C8} 日次 撃破・戦死 推移 <span class="muted" style="font-weight:400;font-size:11px">各日=棒 / 累計=線 ・ 撃破=左軸 / 戦死=右軸</span></h3>
+    ${series.length?'<div class="chart-box" style="height:280px"><canvas id="cCampDetail"></canvas></div>':'<div class="hint">※ この総督の日次データがありません（生データに未取込の王国・期間）。</div>'}</div>`;
+  if(series.length){
+    const labels=series.map(x=>x.date.slice(5).replace('-','/'));
+    let ck=0,cd=0; const cumKP=[],cumDead=[];
+    const dayKP=series.map(x=>x.kp), dayDead=series.map(x=>x.dead);
+    series.forEach(x=>{ck+=x.kp;cd+=x.dead;cumKP.push(ck);cumDead.push(cd);});
+    charts.cCampDetail=new Chart($('cCampDetail'),{
+      data:{labels,datasets:[
+        {type:'bar',label:'撃破/日',data:dayKP,backgroundColor:'#5b93ff',borderRadius:3,yAxisID:'y',order:3},
+        {type:'line',label:'撃破累計',data:cumKP,borderColor:'#9dbcff',backgroundColor:'#9dbcff',yAxisID:'y',tension:.3,pointRadius:2,borderWidth:2,order:1},
+        {type:'bar',label:'戦死/日',data:dayDead,backgroundColor:'#ff5f70',borderRadius:3,yAxisID:'y2',order:4},
+        {type:'line',label:'戦死累計',data:cumDead,borderColor:'#ffb64a',backgroundColor:'#ffb64a',yAxisID:'y2',tension:.3,pointRadius:2,borderWidth:2,order:2}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#96a2ba'}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+yen(c.raw)}}},
+        scales:{x:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}},
+          y:{position:'left',title:{display:true,text:'撃破',color:'#5b93ff'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{color:'#263149'}},
+          y2:{position:'right',title:{display:true,text:'戦死',color:'#ff5f70'},ticks:{color:'#96a2ba',callback:v=>oku(v)},grid:{drawOnChartArea:false}}}}});
+  }
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function renderCampTab(){
   renderCampPeriodBtns();renderCampScopeBtns();renderCampMetricBtns();
