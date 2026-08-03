@@ -376,7 +376,7 @@ function renderDir(){
     const kn=g(r,'kpNorm');
     const kpCell=isS?'<span class="muted">―</span>':`<span class="${kn>=100?'ok':'ng'}">${pct(kn)}</span>`;
     const dn=isS?deathNormOf(r):null;
-    const dnCell=isS?(dn!=null?`<span class="${dn>=100?'ok':'ng'}">${pct(dn)}</span>`:'<span class="muted">―</span>'):'<span class="muted">―</span>';
+    const dnCell=isS?(dn!=null?`<span class="${dn>=100?'ok':'ng'}">${pct(dn)}</span>`:'<span class="muted">対象外</span>'):'<span class="muted">―</span>';
     return `<tr data-id="${g(r,'id')}"><td>${g(r,'name')}</td><td>${g(r,'id')}</td><td style="text-align:left">${kind}</td><td>${oku(g(r,'contribPoint'))}</td><td>${oku(g(r,'totalKP'))}</td><td>${oku(g(r,'totalDead'))}</td><td>${kpCell}</td><td>${dnCell}</td></tr>`;
   }).join('') || '<tr><td colspan="8" class="empty">該当なし</td></tr>';
   $('dir').querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>{$('q').value=tr.dataset.id;onSearch();});
@@ -416,11 +416,11 @@ function renderDetail(){
       if(pr){joined++; totDead+=(dead||0);}
       const tgt = pw!=null? deathTargetOf(pw) : null;
       const nrm = pw!=null? deathNormPct(dead,pw) : null;
-      const tgtCell = pr? (nrm!=null? oku(tgt) : '<span class="muted">―</span>') : '-';
-      const nrmCell = pr? (nrm!=null? `<span class="${nrm>=100?'ok':'ng'}">${pct(nrm)}</span>` : '<span class="muted">―</span>') : '-';
+      const tgtCell = pr? (nrm!=null? oku(tgt) : '<span class="muted">対象外</span>') : '-';
+      const nrmCell = pr? (nrm!=null? `<span class="${nrm>=100?'ok':'ng'}">${pct(nrm)}</span>` : '<span class="muted">対象外</span>') : '-';
       return `<tr><td>${latest}${pr?'':' <span class="muted" style="font-size:10px">(登録名)</span>'}</td><td class="muted">${s.subId}</td><td>${pr?'<span class="ok">参加</span>':'<span class="muted">―</span>'}</td><td>${pw!=null?oku(pw):'-'}</td><td>${dead!=null?oku(dead):'-'}</td><td>${tgtCell}</td><td>${nrmCell}</td></tr>`;
     }).join('');
-    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント（${subs.length}） <span class="muted" style="font-weight:400;font-size:12px">参加 ${joined} ／ サブ戦死合計 ${oku(totDead)}</span></h3><div class="tbl-wrap" style="max-height:300px"><table><thead><tr><th>サブ名(最新)</th><th>サブID</th><th>参加</th><th>戦力</th><th>戦死</th><th>目標戦死</th><th>戦死ノルマ</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="hint">最新名はポータルのIDから取得。戦死ノルマ＝戦死数÷（開始戦力×1%）。100%以上=達成。</div>`;
+    subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント（${subs.length}） <span class="muted" style="font-weight:400;font-size:12px">参加 ${joined} ／ サブ戦死合計 ${oku(totDead)}</span></h3><div class="tbl-wrap" style="max-height:300px"><table><thead><tr><th>サブ名(最新)</th><th>サブID</th><th>参加</th><th>戦力</th><th>戦死</th><th>目標戦死</th><th>戦死ノルマ</th></tr></thead><tbody>${rowsHtml}</tbody></table></div><div class="hint">最新名はポータルのIDから取得。戦死ノルマ＝戦死数÷（開始戦力×1%）。100%以上=達成。開始戦力45M未満のサブは対象外。</div>`;
   } else {
     subsHtml=`<h3 style="margin-top:18px">\u{1F465} サブアカウント</h3><div class="hint">このメインに紐づくサブ登録はありません。</div>`;
   }
@@ -448,11 +448,11 @@ function renderSubDetail(r){
   const mName=mr?g(mr,'name'):(mid||'-');
   det.innerHTML=`<div class="card"><div class="detail-head"><span class="nm">${g(r,'name')}</span><span class="id">ID: ${g(r,'id')}</span><span class="pill sub">SUB</span><span class="id">所属メイン: <a href="#" id="goMain" style="color:var(--blue);font-weight:700">${mName}</a> ／ 開始戦力 ${oku(pw)}</span></div>
     <div class="norm"><div class="normbox"><div class="t">⚔️ 撃破ノルマ達成率</div><div class="big" style="color:var(--muted)">対象外</div><div class="meta">サブに撃破ノルマはありません ・ 撃破P ${yen(dispKP)}</div></div>
-    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率 <span class="muted" style="font-weight:400">(戦死÷開始戦力の1%)</span></div><div class="big" style="color:${dN!=null?dColor:'var(--muted)'}">${dN!=null?pct(dN):'―'}</div>${dN!=null?bars(dN,Math.max(150,dN),dColor):''}<div class="meta">戦死 ${yen(dispDead)}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${yen(dTgt)}</div></div></div>
+    <div class="normbox"><div class="t">\u{1F480} 戦死ノルマ達成率 <span class="muted" style="font-weight:400">(戦死÷開始戦力の1%)</span></div><div class="big" style="color:${dN!=null?dColor:'var(--muted)'}">${dN!=null?pct(dN):'対象外'}</div>${dN!=null?bars(dN,Math.max(150,dN),dColor):''}<div class="meta">${dN!=null?`戦死 ${yen(dispDead)}（T5 ${yen(g(r,'totalDeadT5'))} / T4 ${yen(g(r,'totalDeadT4'))}）/ 目標 ${yen(dTgt)}`:`開始戦力 45M 未満のため対象外 ・ 戦死 ${yen(dispDead)}`}</div></div></div>
     <div class="statgrid"><div class="sb"><div class="l">貢献Point</div><div class="v">${oku(g(r,'contribPoint'))}</div><div class="r">戦死P（サブ重み）</div></div>
     <div class="sb"><div class="l">撃破P</div><div class="v">${oku(dispKP)}</div><div class="r">ノルマ対象外</div></div>
-    <div class="sb"><div class="l">戦死数</div><div class="v">${oku(dispDead)}</div><div class="r">目標 ${oku(dTgt)}</div></div>
-    <div class="sb"><div class="l">戦死ノルマ判定</div><div class="v">${dN!=null?(dN>=100?'達成':'未達'):'―'}</div><div class="r">${dN!=null&&dN<100?'未達ペナルティ対象':''}</div></div></div>
+    <div class="sb"><div class="l">戦死数</div><div class="v">${oku(dispDead)}</div><div class="r">${dN!=null?'目標 '+oku(dTgt):'目標なし'}</div></div>
+    <div class="sb"><div class="l">戦死ノルマ判定</div><div class="v">${dN!=null?(dN>=100?'達成':'未達'):'対象外'}</div><div class="r">${dN!=null&&dN<100?'未達ペナルティ対象':''}</div></div></div>
     <h3 style="margin-top:18px">\u{1F4C8} 日次 撃破・戦死 推移 <span class="muted" style="font-weight:400;font-size:11px">各日=棒 / 累計=線 ・ 撃破=左軸 / 戦死=右軸</span></h3><div class="chart-box" style="height:300px"><canvas id="cDetail"></canvas></div><div class="hint" id="detailChartHint"></div></div>`;
   const gm=$('goMain'); if(gm&&mid) gm.onclick=e=>{e.preventDefault();$('q').value=mid;onSearch();};
   drawDetailChart(r);
@@ -488,8 +488,10 @@ const METRICS={
   norm:{label:'撃破ノルマ',key:'kpNorm',color:'#3ecf8e',fmt:pct,isNorm:true}
 };
 /* 戦死ノルマ：達成率 ＝ 戦死数 ÷（開始戦力×1%）。100%＝戦死が開始戦力の1%（前回KvK方式） */
-function deathTargetOf(p){return Math.round((p||0)*0.01);}
-function deathNormPct(dead,power){return power>0?((dead||0)/(power*0.01)*100):null;}
+const DEATH_MIN_POWER=45000000; // 開始戦力45M未満のサブは戦死ノルマ対象外
+function deathEligible(p){return (p||0)>=DEATH_MIN_POWER;}
+function deathTargetOf(p){return deathEligible(p)?Math.round(p*0.01):0;}
+function deathNormPct(dead,power){return deathEligible(power)?((dead||0)/(power*0.01)*100):null;}
 function deathNormOf(r){return deathNormPct(g(r,'totalDead'),g(r,'startPower'));}
 const SUBMETRICS={
   dead:{label:'戦死数',key:'totalDead',color:'#ff5f70',fmt:oku,isNorm:false},
@@ -503,11 +505,12 @@ function renderKPIs(){
   const n=MAIN.length;
   const avgNorm=n?MAIN.reduce((a,r)=>a+(g(r,'kpNorm')||0),0)/n:0;
   const achieved=MAIN.filter(r=>g(r,'kpNorm')>=100).length;
-  const sAch=SUBONLY.filter(r=>(deathNormOf(r)||0)>=100).length;
+  const sTgt=SUBONLY.filter(r=>deathEligible(g(r,'startPower')));
+  const sAch=sTgt.filter(r=>(deathNormOf(r)||0)>=100).length;
   const items=[
     ['メイン / サブ', MAIN.length+' / '+SUBONLY.length,'対象人数'],
     ['撃破ノルマ平均(メイン)', avgNorm.toFixed(1)+'%', achieved+' 名達成'],
-    ['サブ戦死ノルマ達成', sAch+' / '+SUBONLY.length+' 名','100%＝開始戦力の1%（サブのみ対象）'],
+    ['サブ戦死ノルマ達成', sAch+' / '+sTgt.length+' 名','45M以上のサブのみ対象'],
     ['総戦死数', oku(ROWS.reduce((a,r)=>a+(g(r,'totalDead')||0),0)),'全体合計'],
   ];
   $('kpis').innerHTML=items.map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
@@ -540,10 +543,10 @@ function renderRanking(){
     th.innerHTML='<tr><th>順位</th><th>名前</th><th>所属メイン</th><th>戦力</th><th>戦死</th><th>目標戦死</th><th>戦死ノルマ</th><th>撃破P</th></tr>';
     tb.innerHTML=sorted.map((r,i)=>{const mid=SUB2MAIN[String(g(r,'id'))]; const mn=(mid&&PMAP[mid])?g(PMAP[mid],'name'):(mid||'-');
       const pw=g(r,'startPower'), tgt=deathTargetOf(pw), nrm=deathNormOf(r);
-      const tgtCell=nrm!=null?oku(tgt):'<span class="muted">―</span>';
-      const nrmCell=nrm!=null?`<span class="${nrm>=100?'ok':'ng'}">${pct(nrm)}</span>`:'<span class="muted">―</span>';
+      const tgtCell=nrm!=null?oku(tgt):'<span class="muted">対象外</span>';
+      const nrmCell=nrm!=null?`<span class="${nrm>=100?'ok':'ng'}">${pct(nrm)}</span>`:'<span class="muted">対象外</span>';
       return `<tr><td><span class="${rkCls(i)}">${i+1}</span></td><td>${g(r,'name')}</td><td class="muted">${mn}</td><td>${oku(pw)}</td><td><b>${oku(g(r,'totalDead'))}</b></td><td>${tgtCell}</td><td>${nrmCell}</td><td>${oku(g(r,'totalKP'))}</td></tr>`;}).join('') || '<tr><td colspan="8" class="empty">サブのデータがありません</td></tr>';
-    $('rankHint').textContent='※ 戦死ノルマ＝戦死数÷（開始戦力×1%）。100%以上=達成。並び替えは上のボタンで切替。';
+    $('rankHint').textContent='※ 戦死ノルマ＝戦死数÷（開始戦力×1%）。100%以上=達成。開始戦力45M未満のサブは対象外。並び替えは上のボタンで切替。';
   } else {
     th.innerHTML='<tr><th>順位</th><th>名前</th><th>'+m.label+'</th><th>撃破ノルマ</th><th>戦死</th><th>貢献P</th></tr>';
     tb.innerHTML=sorted.map((r,i)=>{const norm=g(r,'kpNorm');
