@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KVK20 検証ワークベンチ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0b0f1a;--panel:#141b2c;--panel2:#1b2438;--ink:#e9edf6;--muted:#96a2ba;--line:#263149;
+--blue:#5b93ff;--green:#3ecf8e;--red:#ff5f70;--amber:#ffb64a;--purple:#a97bff;
+--grad:linear-gradient(135deg,#5b93ff,#a97bff)}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 500px at 70% -10%,#1a2440 0%,var(--bg) 55%) fixed,var(--bg);
+color:var(--ink);font-family:"Noto Sans JP","Segoe UI",Roboto,Meiryo,sans-serif;font-size:13px;line-height:1.55}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(11,15,26,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:0 18px}
+.topbar .in{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0}
+.topbar h1{font-size:15px;margin:0;font-weight:800}
+.topbar .sub{font-size:10.5px;color:var(--muted)}
+.badge{margin-left:auto;background:#0d1424;border:1px solid var(--line);padding:4px 12px;border-radius:14px;font-size:11px;color:var(--muted)}
+.tabs{max-width:1240px;margin:0 auto;display:flex;gap:6px;overflow-x:auto;padding:0 0 10px}
+.tab{flex:none;padding:8px 16px;border-radius:9px;color:var(--muted);cursor:pointer;font-weight:700;font-size:13px}
+.tab:hover{color:var(--ink);background:var(--panel)}
+.tab.active{background:var(--grad);color:#fff}
+.wrap{max-width:1240px;margin:0 auto;padding:14px}
+.page{display:none}.page.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:13px}
+.card h3{margin:0 0 10px;font-size:14px;font-weight:800}
+.hint{font-size:11px;color:var(--muted);margin-top:7px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:13px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grad)}
+.kpi .l{font-size:11px;color:var(--muted)}.kpi .v{font-size:20px;font-weight:800;margin-top:3px}.kpi .s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.ctrl{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.ctrl .f{display:flex;flex-direction:column;gap:4px}
+.ctrl label{font-size:11px;color:var(--muted);font-weight:700}
+.ctrl input[type=number],.ctrl input[type=text],.ctrl select{background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:7px 9px;font-size:13px;width:110px}
+.ctrl input[type=text].wide{width:190px}
+.ctrl input[type=range]{width:160px;accent-color:#5b93ff}
+button.b{background:var(--grad);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;font-size:13px}
+button.g{background:#0d1424;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 13px;cursor:pointer;font-size:12px}
+.tblw{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:12.3px}
+thead th{position:sticky;top:0;background:#0e1526;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:700;z-index:3;cursor:pointer}
+thead th:first-child,thead th:nth-child(2){text-align:left}
+tbody td{padding:6.5px 10px;border-bottom:1px solid #1d2740;text-align:right;white-space:nowrap}
+tbody td:first-child,tbody td:nth-child(2){text-align:left}
+tbody tr:nth-child(even){background:rgba(255,255,255,.015)}
+.ok{color:var(--green)}.ng{color:var(--red)}.mu{color:var(--muted)}.am{color:var(--amber)}
+.pill{font-size:10.5px;padding:1px 8px;border-radius:9px;font-weight:700}
+.pill.m{background:rgba(62,207,142,.12);color:var(--green)}
+.pill.s{background:rgba(255,182,74,.12);color:var(--amber)}
+.pill.u{background:rgba(150,162,186,.14);color:var(--muted)}
+.chart{position:relative;height:330px}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.chk{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:4px 0}
+.chk input{accent-color:#5b93ff;width:15px;height:15px}
+.statusbar{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 13px;margin-bottom:12px;font-size:12px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:#667;flex:none}
+.statusbar.live .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.statusbar.err .dot{background:var(--red)}
+.big{font-size:24px;font-weight:800}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.cols2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="in">
+    <h1>&#128300; KVK20 検証ワークベンチ</h1>
+    <span class="sub">2062 オルレアン包囲 ｜ 2026/07/06〜08/02 の実測データ</span>
+    <span class="badge" id="recBadge">—</span>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="cmp">&#127760; 王国比較</div>
+    <div class="tab" data-tab="sim">&#129518; 削減シミュレーション</div>
+    <div class="tab" data-tab="dir">&#128101; 個票</div>
+    <div class="tab" data-tab="subs">&#129513; サブ分析</div>
+    <div class="tab" data-tab="doc">&#128214; 使い方</div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="statusbar" id="statusbar"><span class="dot"></span><span id="statusText">読み込み中</span>
+    <button class="g" style="margin-left:auto" onclick="loadData()">&#8635; 再読み込み</button></div>
+
+  <div class="card">
+    <h3>&#9881;&#65039; 判定条件（全タブ共通・変えると即再計算）</h3>
+    <div class="ctrl">
+      <div class="f"><label>稼働判定：撃破 ≧ 戦力 ×（%）</label><input type="number" id="pA" value="10" min="0" step="1"></div>
+      <div class="f"><label>稼働判定：戦死 ≧ 戦力 ×（%）</label><input type="number" id="pB" value="0.1" min="0" step="0.05"></div>
+      <div class="f"><label>王国パワー算入 上位N名</label><input type="number" id="pN" value="300" min="1" step="10"></div>
+      <div class="f"><label>戦死兵の復活率（%）</label><input type="number" id="pRev" value="60" min="0" max="100" step="5"></div>
+      <div class="f"><label>戦力帯の区切り（M・カンマ区切り）</label><input type="text" id="pBands" class="wide" value="10,30,45,70"></div>
+      <button class="b" onclick="recalc()">再計算</button>
+    </div>
+    <div class="hint">稼働＝「撃破P ≧ 戦力×α または 戦死 ≧ 戦力×β」。既定の α=10%・β=0.1% は、城を焼かれた反撃分を除外しつつ実際に戦った人を取りこぼさない実測値。</div>
+  </div>
+
+  <!-- 王国比較 -->
+  <div class="page active" id="page-cmp">
+    <div class="kpis" id="cmpKpis"></div>
+    <div class="card">
+      <h3>戦力帯 × 王国 <span class="mu" style="font-weight:400;font-size:11px">値の切替→</span>
+        <select id="cmpMetric" onchange="renderCmp()" style="background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:5px 8px">
+          <option value="n">人数（稼働/総数）</option>
+          <option value="pw">戦力合計</option>
+          <option value="kp">撃破P合計</option>
+          <option value="dead">戦死合計</option>
+          <option value="kpc">撃破P/人（全員）</option>
+          <option value="kpa">撃破P/人（稼働者のみ）</option>
+          <option value="dda">戦死/人（稼働者のみ）</option>
+          <option value="fe">燃費（撃破÷戦力）</option>
+        </select></h3>
+      <div class="tblw" style="max-height:none"><table id="cmpTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="chart"><canvas id="cmpChart"></canvas></div>
+      <div class="hint">他国はすべて同じ⑤ラ・マルシュ陣営（同じ相手と同じ期間戦った味方）。比較条件は公平。</div>
+    </div>
+    <div class="card">
+      <h3>参加24王国 世界ランキング（300位まで・KvK後取得）</h3>
+      <div class="tblw" style="max-height:340px"><table id="rankTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="hint">7王国は300位圏外。マッチングは世界順位だけでは決まっていない点に注意。</div>
+    </div>
+  </div>
+
+  <!-- シミュレーション -->
+  <div class="page" id="page-sim">
+    <div class="cols2">
+      <div class="card">
+        <h3>削減対象の選択</h3>
+        <div class="chk"><input type="checkbox" id="tRegSub" checked><label>登録サブ・無稼働</label></div>
+        <div class="chk"><input type="checkbox" id="tUnreg"><label>未登録サブ（サブ登録なし・45M未満）・無稼働</label></div>
+        <div class="chk"><input type="checkbox" id="tMainIdle"><label>メイン（45M以上）・無稼働</label></div>
+        <div class="chk"><input type="checkbox" id="tMainLow"><label>メイン ノルマ達成率が
+          <input type="number" id="pNorm" value="20" min="0" max="100" style="width:60px;background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:3px 6px"> % 以下</label></div>
+        <div class="ctrl" style="margin-top:10px">
+          <div class="f"><label>対象の最低戦力（M）</label><input type="number" id="pMinPw" value="10" min="0" step="1"></div>
+          <div class="f"><label>兵力相当の削除率 <span id="cutLbl">30%</span></label>
+            <input type="range" id="pCut" value="30" min="0" max="100" step="5" oninput="document.getElementById('cutLbl').textContent=this.value+'%';recalc()"></div>
+        </div>
+        <div class="ctrl" style="margin-top:6px">
+          <div class="f"><label>上位N内のみを対象にする</label>
+            <select id="pOnlyTop" onchange="recalc()" style="background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;width:150px">
+              <option value="1">する（効率重視）</option><option value="0">しない（全対象）</option>
+            </select></div>
+        </div>
+        <div class="hint">削除率は「そのアカウントの戦力のうち何%が消えるか」。実例では兵の割合は3.5〜32%とアカウント差が大きい。</div>
+      </div>
+      <div class="card">
+        <h3>結果</h3>
+        <div class="kpis" style="grid-template-columns:1fr 1fr" id="simKpis"></div>
+        <div class="chart" style="height:230px"><canvas id="simChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>対象アカウント <span class="mu" id="simCount" style="font-weight:400"></span>
+        <button class="g" style="float:right" onclick="exportCSV(simList(),'削減対象')">CSV出力</button></h3>
+      <div class="tblw" style="max-height:420px"><table id="simTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="hint">「上位N内」列が ― の行は王国パワーに算入されておらず、削っても順位には影響しない。</div>
+    </div>
+  </div>
+
+  <!-- 個票 -->
+  <div class="page" id="page-dir">
+    <div class="card">
+      <div class="ctrl">
+        <div class="f"><label>検索（ID / 名前）</label><input type="text" id="q" class="wide" oninput="renderDir()"></div>
+        <div class="f"><label>区分</label>
+          <select id="fKind" onchange="renderDir()" style="width:140px;background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px">
+            <option value="">すべて</option><option value="main">メイン(45M以上)</option>
+            <option value="sub">登録サブ</option><option value="unreg">未登録(45M未満)</option>
+          </select></div>
+        <div class="f"><label>稼働</label>
+          <select id="fAct" onchange="renderDir()" style="width:110px;background:#0d1424;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px">
+            <option value="">すべて</option><option value="1">稼働のみ</option><option value="0">無稼働のみ</option>
+          </select></div>
+        <div class="f"><label>戦力 下限（M）</label><input type="number" id="fLo" value="" oninput="renderDir()"></div>
+        <div class="f"><label>戦力 上限（M）</label><input type="number" id="fHi" value="" oninput="renderDir()"></div>
+        <button class="g" onclick="exportCSV(dirList(),'個票')">CSV出力</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>自国 684アカウント <span class="mu" id="dirCount" style="font-weight:400"></span></h3>
+      <div class="tblw"><table id="dirTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="hint">列見出しクリックで並び替え。戦力＝前夜祭スキャン（ノルマ基準）／現在値＝期間最終スキャン。</div>
+    </div>
+  </div>
+
+  <!-- サブ分析 -->
+  <div class="page" id="page-subs">
+    <div class="kpis" id="subKpis"></div>
+    <div class="card">
+      <h3>メイン別 サブ保有・稼働 <button class="g" style="float:right" onclick="exportCSV(subList(),'サブ保有')">CSV出力</button></h3>
+      <div class="tblw"><table id="subTbl"><thead></thead><tbody></tbody></table></div>
+      <div class="hint">稼働率が低い＝「持っているだけ」。上位N内の無稼働サブが多いメインほど、声かけの効果が大きい。</div>
+    </div>
+  </div>
+
+  <!-- 使い方 -->
+  <div class="page" id="page-doc">
+    <div class="card"><h3>このページについて</h3>
+      <div style="line-height:2">
+        KVK20（2026/07/06〜08/02）の実測データを、誰でも条件を変えて検証できるようにしたページです。データはスプレッドシートの公開CSVから毎回読み込むため、シートを更新すれば反映されます。<br><br>
+        <b style="color:var(--amber)">主な前提（このKvKの分析で確認済み）</b><br>
+        ・王国パワー ＝ 戦力上位300名の合計（4王国で一致を確認）。301位以降は何をしても順位に影響しない<br>
+        ・戦力 ≠ 兵力。建築・研究も含まれ、兵の割合は実例で3.5〜32%とアカウント差が大きい<br>
+        ・稼働判定の既定値（撃破≧戦力×10% or 戦死≧戦力×0.1%）は、城を焼かれた反撃分を除外する実測ライン<br>
+        ・KvK終了時に戦死兵の60%が復活する<br><br>
+        <b style="color:var(--amber)">タブの使い方</b><br>
+        ・<b>王国比較</b>：戦力帯の区切りを自由に変えて4王国を比較。1人あたり・稼働者のみ等の指標切替<br>
+        ・<b>削減シミュレーション</b>：対象と削除率を選ぶと、繰り上がりを反映した王国パワーと推定順位が出る<br>
+        ・<b>個票</b>：全684アカウントの検索・フィルタ・CSV出力<br>
+        ・<b>サブ分析</b>：メイン別のサブ稼働率<br><br>
+        <b style="color:var(--amber)">注意</b><br>
+        ・順位の推定は「他国は変動しない」前提。実際は他国も復活・変動するため上振れしやすい<br>
+        ・防衛専従や増援は撃破が付きにくい。無稼働判定は「要確認リスト」として使い、本人確認を前提にすること
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+/* ===== 公開CSV（index3と同じスプレッドシート）===== */
+const SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=809718978&single=true&output=csv";
+const SUBS_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=501324789&single=true&output=csv";
+const CAMP_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSea_Au25uB_sRbBQnRs-VNTKivhMRL14NDdw6j8KLZGAUGayNYAtGt9_7pCMEsJT4vH9LKeacaBcNy/pub?gid=563590891&single=true&output=csv";
+/* ===== 埋め込みデータ：世界ランキング300位（KvK後取得）===== */
+const RANK=[[1,"3308",29.2],[2,"1001",29.1],[3,"1093",26.8],[4,"1002",26.8],[5,"3213",26.5],[6,"2359",25.2],[7,"1875",24.6],[8,"1981",24.3],[9,"3060",24.0],[10,"3189",23.9],[11,"2489",23.1],[12,"1365",23.0],[13,"3594",22.2],[14,"1394",22.0],[15,"2563",21.9],[16,"1903",21.9],[17,"2293",21.7],[18,"2529",21.5],[19,"1718",21.1],[20,"1473",21.0],[22,"2469",20.3],[23,"3212",20.1],[24,"2638",20.0],[25,"2141",19.8],[26,"1052",19.7],[27,"2728",19.6],[28,"1316",19.3],[29,"3274",19.1],[30,"2748",19.1],[31,"3639",19.0],[32,"3672",19.0],[33,"2497",18.9],[34,"1786",18.7],[35,"1879",18.4],[36,"1606",18.4],[37,"2537",18.3],[38,"1649",18.2],[39,"1015",18.2],[40,"3517",18.2],[41,"3257",18.0],[42,"1397",17.8],[43,"3418",17.7],[44,"1209",17.7],[45,"2902",17.6],[46,"1003",17.6],[47,"2905",17.5],[48,"1568",17.5],[49,"2398",17.4],[50,"2925",17.2],[51,"3299",17.1],[52,"1105",16.9],[53,"2387",16.9],[54,"1818",16.9],[55,"1271",16.7],[56,"2382",16.7],[57,"1761",16.7],[58,"3500",16.6],[59,"2914",16.6],[60,"2243",16.6],[61,"2983",16.6],[62,"1631",16.6],[63,"3793",16.6],[64,"1082",16.5],[65,"1532",16.5],[66,"2715",16.5],[67,"2341",16.4],[68,"3526",16.4],[69,"2403",16.4],[70,"1212",16.3],[71,"3608",16.3],[72,"1404",16.1],[73,"1076",16.1],[74,"2965",16.1],[75,"1939",16.0],[76,"2020",15.9],[77,"3256",15.9],[78,"1824",15.8],[79,"1126",15.8],[80,"1843",15.8],[81,"1816",15.8],[82,"2062",15.8],[83,"1016",15.7],[84,"1079",15.6],[85,"2199",15.6],[86,"2405",15.6],[87,"2685",15.4],[88,"1206",15.3],[89,"2194",15.3],[90,"1854",15.3],[91,"1671",15.2],[92,"2804",15.2],[93,"2027",15.1],[94,"1261",15.1],[95,"1592",15.1],[96,"2179",15.0],[97,"1169",15.0],[98,"1960",14.9],[99,"3535",14.9],[100,"3538",14.9],[101,"3319",14.9],[102,"1877",14.9],[103,"2626",14.9],[104,"1837",14.9],[105,"1757",14.9],[106,"2326",14.8],[107,"2690",14.7],[108,"1075",14.7],[109,"1220",14.7],[110,"3462",14.7],[111,"3710",14.7],[112,"2666",14.6],[113,"1343",14.6],[114,"3025",14.6],[115,"1992",14.6],[116,"3143",14.6],[117,"2070",14.6],[118,"1858",14.5],[119,"3491",14.5],[120,"1287",14.4],[121,"1501",14.4],[122,"3767",14.4],[123,"3698",14.4],[124,"1507",14.3],[125,"2112",14.3],[126,"2116",14.3],[127,"1682",14.2],[128,"1770",14.2],[129,"1821",14.2],[130,"2442",14.1],[131,"2783",14.1],[132,"2269",14.1],[133,"2010",14.1],[134,"3074",14.1],[135,"3731",14.1],[136,"3743",14.0],[137,"2232",14.0],[138,"2217",14.0],[139,"2551",14.0],[140,"2103",14.0],[141,"2600",14.0],[142,"2919",14.0],[143,"2260",13.9],[144,"1611",13.9],[145,"2218",13.9],[146,"1337",13.9],[147,"2183",13.9],[148,"2400",13.8],[149,"2246",13.8],[150,"2654",13.8],[151,"3652",13.8],[152,"1968",13.7],[153,"1258",13.7],[154,"1020",13.7],[155,"2385",13.7],[156,"3217",13.7],[157,"2871",13.7],[158,"2050",13.7],[159,"2538",13.7],[160,"3695",13.7],[161,"2964",13.7],[162,"3374",13.7],[163,"3741",13.6],[164,"1185",13.6],[165,"1281",13.6],[166,"1047",13.6],[167,"1418",13.6],[168,"3248",13.6],[169,"3307",13.5],[170,"2212",13.5],[171,"3540",13.5],[172,"2080",13.5],[173,"1525",13.5],[174,"1839",13.5],[175,"3042",13.5],[176,"3604",13.5],[177,"3772",13.4],[178,"2189",13.4],[179,"2397",13.4],[180,"1756",13.4],[181,"3099",13.4],[182,"3059",13.4],[183,"1163",13.4],[184,"1989",13.3],[185,"1227",13.3],[186,"3376",13.3],[187,"2345",13.3],[188,"3584",13.3],[189,"1235",13.3],[190,"3094",13.2],[191,"3244",13.2],[192,"3406",13.2],[193,"3637",13.2],[194,"1885",13.2],[195,"3013",13.2],[196,"1123",13.2],[197,"1071",13.2],[198,"3021",13.2],[199,"1148",13.2],[200,"1277",13.1],[201,"1368",13.1],[202,"2459",13.1],[203,"2988",13.1],[204,"1370",13.0],[205,"3397",13.0],[206,"1134",13.0],[207,"1414",13.0],[208,"2776",13.0],[209,"2261",13.0],[210,"3033",13.0],[211,"2583",13.0],[212,"2143",12.9],[213,"3372",12.9],[214,"3155",12.9],[215,"2461",12.9],[216,"2170",12.8],[217,"1387",12.8],[218,"2647",12.8],[219,"3518",12.8],[220,"1559",12.8],[221,"3676",12.8],[222,"2655",12.8],[223,"3757",12.8],[224,"3022",12.8],[225,"3542",12.8],[226,"2890",12.8],[227,"1612",12.8],[228,"3453",12.8],[229,"2774",12.8],[230,"2707",12.8],[231,"2042",12.7],[232,"1908",12.7],[233,"2149",12.7],[234,"3125",12.7],[235,"1187",12.7],[236,"2755",12.7],[237,"3230",12.7],[238,"3355",12.7],[239,"2476",12.7],[240,"1385",12.7],[241,"1357",12.7],[242,"2643",12.7],[243,"3501",12.7],[244,"3322",12.7],[245,"1587",12.6],[246,"1955",12.6],[247,"1397",12.6],[248,"1184",12.6],[249,"2378",12.6],[250,"2929",12.6],[251,"3331",12.6],[252,"1307",12.6],[253,"2346",12.6],[254,"3561",12.5],[255,"2026",12.5],[256,"1623",12.5],[257,"1538",12.5],[258,"1447",12.5],[259,"2379",12.5],[260,"1443",12.5],[261,"3748",12.5],[262,"2939",12.4],[263,"3632",12.4],[264,"2518",12.4],[265,"2657",12.4],[266,"1923",12.4],[267,"2267",12.4],[268,"1994",12.4],[269,"3286",12.4],[270,"3342",12.4],[271,"1672",12.4],[272,"3007",12.3],[273,"1152",12.3],[274,"1684",12.3],[275,"3043",12.3],[276,"2940",12.3],[277,"3114",12.3],[278,"2726",12.3],[279,"1103",12.3],[280,"3348",12.2],[281,"1164",12.2],[282,"2262",12.2],[283,"1034",12.2],[284,"2059",12.2],[285,"3294",12.2],[286,"1046",12.2],[287,"1243",12.2],[288,"1265",12.1],[289,"1964",12.1],[290,"1155",12.1],[291,"2581",12.1],[292,"3228",12.1],[293,"3275",12.1],[294,"1080",12.1],[295,"3725",12.0],[296,"1196",12.0],[297,"3159",12.0],[298,"3279",12.0],[299,"2539",12.0],[300,"1377",12.0]];
+const ZONES={'1002':'①ブリタニー','1606':'①ブリタニー','3757':'①ブリタニー',
+'1206':'②ピカルディ','3604':'②ピカルディ','3542':'②ピカルディ','1689':'②ピカルディ',
+'2218':'③ブルボン','3406':'③ブルボン','2975':'③ブルボン','3314':'③ブルボン',
+'2925':'④ポワトゥー','2217':'④ポワトゥー','3376':'④ポワトゥー','3325':'④ポワトゥー',
+'1786':'⑤ラ・マルシュ','2062':'⑤ラ・マルシュ','3143':'⑤ラ・マルシュ','1368':'⑤ラ・マルシュ',
+'2902':'⑥オーヴェルニュ','3199':'⑥オーヴェルニュ','3768':'⑥オーヴェルニュ','3586':'⑥オーヴェルニュ'};
+const TIER_POW=[6.5,4.6,3.0,2.0,1.0]; // T5..T1 1兵あたり戦力（実測近似）
+
+/* ===== パース ===== */
+function parseCSV(t){const rows=[];let f='',row=[],q=false;
+for(let i=0;i<t.length;i++){const c=t[i];
+ if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+ else{if(c==='"')q=true;else if(c===','){row.push(f);f=''}
+ else if(c==='\n'){row.push(f);rows.push(row);row=[];f=''}
+ else if(c==='\r'){}else f+=c}}
+if(f!==''||row.length){row.push(f);rows.push(row)}return rows}
+const num=x=>Number(String(x??'').replace(/,/g,'').replace('%',''))||0;
+async function get(u){const r=await fetch(u+(u.includes('?')?'&':'?')+'cb='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}
+
+/* ===== データ ===== */
+let SELF=[],CAMP={},SUBSET=new Set(),SUB2M={},charts={};
+let dirSort={k:'pw',d:-1};
+async function loadData(){
+  const sb=document.getElementById('statusbar');sb.className='statusbar';
+  document.getElementById('statusText').textContent='読み込み中…';
+  try{
+    const [pt,st,ct]=await Promise.all([get(SHEET_CSV),get(SUBS_CSV),get(CAMP_CSV)]);
+    SUBSET=new Set();SUB2M={};
+    for(const r of parseCSV(st)){const s=String(r[0]||'').trim(),m=String(r[2]||'').trim();
+      if(/^\d{4,}$/.test(s)&&/^\d{4,}$/.test(m)){SUBSET.add(s);SUB2M[s]=m}}
+    // portal: HDRMAPで列特定
+    const arr=parseCSV(pt);let map=null;
+    const HM={'ID':'id','Name':'name','sub':'sub','Start Power':'pw','撃破数目標値':'tgt','Total KP':'kp','Total Dead':'dead','Total Dead T4':'t4','Total Dead T5':'t5','貢献Point':'cp','撃破ノルマ達成率':'kn'};
+    for(const r of arr){const m={};let h=0;
+      for(let i=0;i<r.length;i++){const k=HM[String(r[i]||'').trim()];if(k&&!(k in m)){m[k]=i;h++}}
+      if(h>=6){map=m;break}}
+    const P={};
+    for(const r of arr){if(!/^\d{4,}$/.test(String(r[0]||'').trim()))continue;
+      const g=k=>map&&map[k]!=null?r[map[k]]:'';
+      P[String(r[0]).trim()]={name:String(g('name')||''),pw:num(g('pw')),tgt:num(g('tgt')),kp:num(g('kp')),dead:num(g('dead')),t4:num(g('t4')),t5:num(g('t5')),cp:num(g('cp')),kn:num(g('kn'))}}
+    // 統合: 全王国
+    CAMP={};SELF=[];
+    for(const r of parseCSV(ct)){
+      const id=String(r[0]||'').trim();if(!/^\d{4,}$/.test(id))continue;
+      const kg=String(r[17]||'').trim();if(!kg)continue;
+      const d=[num(r[4]),num(r[5]),num(r[6]),num(r[7]),num(r[8])];
+      const rec={id,name:String(r[1]||'').trim(),cur:num(r[2]),d,dead:d.reduce((a,b)=>a+b,0),kp:num(r[9]),kg};
+      (CAMP[kg]=CAMP[kg]||[]).push(rec);
+      if(/自国/.test(kg)){
+        const p=P[id]||{};
+        SELF.push({id,name:p.name||rec.name,pw:p.pw||rec.cur,cur:rec.cur,d:rec.d,dead:rec.dead,kp:rec.kp,
+          tgt:p.tgt||0,t4:p.t4||0,t5:p.t5||0,cp:p.cp||0,
+          sub:SUBSET.has(id),main:SUB2M[id]||''})}
+    }
+    document.getElementById('recBadge').textContent='自国 '+SELF.length+'名 ／ '+Object.keys(CAMP).length+'王国';
+    sb.className='statusbar live';
+    document.getElementById('statusText').textContent='連携中 ・ '+new Date().toLocaleString('ja-JP');
+    recalc();
+  }catch(e){sb.className='statusbar err';document.getElementById('statusText').textContent='読み込み失敗（'+e.message+'）'}
+}
+/* ===== 共通判定 ===== */
+const V=id=>num(document.getElementById(id).value);
+function actOf(a,pw){const al=V('pA')/100,be=V('pB')/100;return a.kp>=pw*al||a.dead>=pw*be}
+function kindOf(a){if(a.sub)return'sub';return a.pw<45e6?'unreg':'main'}
+const KLBL={main:'<span class="pill m">メイン</span>',sub:'<span class="pill s">サブ</span>',unreg:'<span class="pill u">未登録</span>'};
+function bands(){const e=String(document.getElementById('pBands').value).split(',').map(x=>num(x)).filter(x=>x>0).sort((a,b)=>a-b);
+  const out=[];let lo=0;for(const b of e){out.push([lo,b]);lo=b}out.push([lo,1e9]);return out}
+const BL=(lo,hi)=>hi>=1e9?lo+'M〜':lo+'〜'+hi+'M';
+const B=n=>(n/1e9).toFixed(2)+'B';
+const M=n=>(n/1e6).toFixed(1)+'M';
+const man=n=>Math.round(n/1e4).toLocaleString('ja-JP')+'万';
+function rankOf(bv){return RANK.filter(x=>x[1]!=='2062').filter(x=>x[2]>bv).length+1}
+function recalc(){renderCmp();renderRankTbl();renderSim();renderDir();renderSubs()}
+
+/* ===== 王国比較 ===== */
+function renderCmp(){
+  const kgs=Object.keys(CAMP).sort((a,b)=>(/自国/.test(b)?1:0)-(/自国/.test(a)?1:0));
+  if(!kgs.length)return;
+  const met=document.getElementById('cmpMetric').value;
+  // KPI
+  const self=CAMP[Object.keys(CAMP).find(k=>/自国/.test(k))]||[];
+  const sAct=self.filter(a=>actOf(a,a.cur));
+  document.getElementById('cmpKpis').innerHTML=[
+    ['自国アカウント',self.length+' 名','稼働 '+sAct.length+' 名（'+Math.round(sAct.length/self.length*100)+'%）'],
+    ['自国 合計戦力',B(self.reduce((s,a)=>s+a.cur,0)),'上位'+V('pN')+'合計 '+B(sorted(self).slice(0,V('pN')).reduce((s,a)=>s+a.cur,0))],
+    ['自国 撃破P',B(self.reduce((s,a)=>s+a.kp,0)),'稼働者平均 '+man(sAct.length?sAct.reduce((s,a)=>s+a.kp,0)/sAct.length:0)],
+    ['自国 戦死',man(self.reduce((s,a)=>s+a.dead,0)),'稼働者平均 '+man(sAct.length?sAct.reduce((s,a)=>s+a.dead,0)/sAct.length:0)]
+  ].map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+  function sorted(v){return[...v].sort((a,b)=>b.cur-a.cur)}
+  const bd=bands();
+  function cell(v){
+    const a=v.filter(x=>actOf(x,x.cur));
+    switch(met){
+      case'n':return{t:`${v.length}名 / 稼働${a.length}（${v.length?Math.round(a.length/v.length*100):0}%）`,val:a.length};
+      case'pw':return{t:B(v.reduce((s,x)=>s+x.cur,0)),val:v.reduce((s,x)=>s+x.cur,0)};
+      case'kp':return{t:B(v.reduce((s,x)=>s+x.kp,0)),val:v.reduce((s,x)=>s+x.kp,0)};
+      case'dead':return{t:man(v.reduce((s,x)=>s+x.dead,0)),val:v.reduce((s,x)=>s+x.dead,0)};
+      case'kpc':return{t:v.length?man(v.reduce((s,x)=>s+x.kp,0)/v.length):'―',val:v.length?v.reduce((s,x)=>s+x.kp,0)/v.length:0};
+      case'kpa':return{t:a.length?man(a.reduce((s,x)=>s+x.kp,0)/a.length):'―',val:a.length?a.reduce((s,x)=>s+x.kp,0)/a.length:0};
+      case'dda':return{t:a.length?man(a.reduce((s,x)=>s+x.dead,0)/a.length):'―',val:a.length?a.reduce((s,x)=>s+x.dead,0)/a.length:0};
+      case'fe':{const p=v.reduce((s,x)=>s+x.cur,0);return{t:p?(v.reduce((s,x)=>s+x.kp,0)/p).toFixed(2):'―',val:p?v.reduce((s,x)=>s+x.kp,0)/p:0}}
+    }}
+  const th=document.querySelector('#cmpTbl thead'),tb=document.querySelector('#cmpTbl tbody');
+  th.innerHTML='<tr><th>戦力帯</th>'+kgs.map(k=>`<th class="${/自国/.test(k)?'am':''}">${k}</th>`).join('')+'</tr>';
+  let html='',chartRows=[];
+  for(const[lo,hi]of bd){
+    const cells=kgs.map(k=>cell(CAMP[k].filter(x=>lo*1e6<=x.cur&&x.cur<hi*1e6)));
+    chartRows.push({b:BL(lo,hi),vals:cells.map(c=>c.val)});
+    html+=`<tr><td><b>${BL(lo,hi)}</b></td>`+cells.map((c,i)=>`<td class="${i===0?'':'mu'}">${c.t}</td>`).join('')+'</tr>'}
+  const tot=kgs.map(k=>cell(CAMP[k]));
+  html+='<tr style="background:#241c1a"><td><b>全体</b></td>'+tot.map(c=>`<td><b>${c.t}</b></td>`).join('')+'</tr>';
+  tb.innerHTML=html;
+  if(charts.cmp)charts.cmp.destroy();
+  charts.cmp=new Chart(document.getElementById('cmpChart'),{type:'bar',
+    data:{labels:chartRows.map(r=>r.b),datasets:kgs.map((k,i)=>({label:k,data:chartRows.map(r=>r.vals[i]),
+      backgroundColor:/自国/.test(k)?'#3ecf8e':['#5b93ff','#ffb64a','#ff5f70','#a97bff'][i%4],borderRadius:3}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#96a2ba'}}},
+      scales:{x:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}},y:{ticks:{color:'#96a2ba'},grid:{color:'#263149'}}}}});
+}
+function renderRankTbl(){
+  const th=document.querySelector('#rankTbl thead'),tb=document.querySelector('#rankTbl tbody');
+  th.innerHTML='<tr><th>世界順位</th><th>王国</th><th>陣営</th><th>総戦力</th></tr>';
+  const parts=Object.keys(ZONES);
+  const rows=[];
+  for(const k of parts){const hit=RANK.find(x=>x[1]===k);rows.push({k,z:ZONES[k],r:hit?hit[0]:9999,p:hit?hit[2]:null})}
+  rows.sort((a,b)=>a.r-b.r);
+  tb.innerHTML=rows.map(x=>`<tr ${x.k==='2062'?'style="background:#241c1a"':''}><td>${x.r===9999?'<span class="mu">圏外</span>':x.r+'位'}</td><td><b>${x.k}</b>${x.k==='2062'?' <span class="am">← 自国</span>':''}</td><td class="${x.z.startsWith('⑤')?'ok':(x.z.startsWith('⑥')?'ng':'mu')}">${x.z}</td><td>${x.p?x.p.toFixed(1)+'B':'<span class="mu">12.0B未満</span>'}</td></tr>`).join('');
+}
+/* ===== シミュレーション ===== */
+function revived(a){return a.cur+V('pRev')/100*a.d.reduce((s,x,i)=>s+x*TIER_POW[i],0)}
+function simTargets(){
+  const minPw=V('pMinPw')*1e6,nl=V('pNorm');
+  const c=id=>document.getElementById(id).checked;
+  return SELF.filter(a=>{
+    if(a.pw<minPw)return false;
+    const k=kindOf(a),idle=!actOf(a,a.pw);
+    if(c('tRegSub')&&k==='sub'&&idle)return true;
+    if(c('tUnreg')&&k==='unreg'&&idle)return true;
+    if(c('tMainIdle')&&k==='main'&&idle)return true;
+    if(c('tMainLow')&&k==='main'&&a.tgt>0&&a.kp/a.tgt*100<=nl)return true;
+    return false});
+}
+let SIMCACHE={list:[],inTop:new Set()};
+function renderSim(){
+  if(!SELF.length)return;
+  const N=V('pN'),cut=V('pCut')/100,onlyTop=document.getElementById('pOnlyTop').value==='1';
+  const rev={};SELF.forEach(a=>rev[a.id]=revived(a));
+  const srt=Object.entries(rev).sort((a,b)=>b[1]-a[1]);
+  const topSet=new Set(srt.slice(0,N).map(x=>x[0]));
+  const base=srt.slice(0,N).reduce((s,x)=>s+x[1],0);
+  let tg=simTargets();
+  if(onlyTop)tg=tg.filter(a=>topSet.has(a.id));
+  SIMCACHE={list:tg,inTop:topSet};
+  const after={...rev};let cutSum=0;
+  tg.forEach(a=>{const c=a.cur*cut;after[a.id]-=c;cutSum+=c});
+  const t=Object.values(after).sort((a,b)=>b-a).slice(0,N).reduce((s,x)=>s+x,0);
+  const eff=cutSum?Math.round((base-t)/cutSum*100):0;
+  document.getElementById('simKpis').innerHTML=[
+    ['王国パワー（復活後）',B(base),rankOf(base/1e9)+'位相当'],
+    ['削除後',B(t),'<b class="'+((base-t)>0?'ok':'mu')+'">'+rankOf(t/1e9)+'位相当</b>'],
+    ['実際に減る量',B(base-t),'単純削減 '+B(cutSum)+' ／ 実効 '+eff+'%'],
+    ['対象アカウント',tg.length+' 名','戦力計 '+B(tg.reduce((s,a)=>s+rev[a.id],0))]
+  ].map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+  if(charts.sim)charts.sim.destroy();
+  charts.sim=new Chart(document.getElementById('simChart'),{type:'bar',
+    data:{labels:['現状(復活後)','削除後'],datasets:[{data:[base/1e9,t/1e9],backgroundColor:['#96a2ba','#3ecf8e'],borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>c.raw.toFixed(2)+'B（'+rankOf(c.raw)+'位相当）'}}},
+      scales:{x:{ticks:{color:'#96a2ba',callback:v=>v+'B'},grid:{color:'#263149'}},y:{ticks:{color:'#96a2ba'},grid:{display:false}}}}});
+  // table
+  const th=document.querySelector('#simTbl thead'),tb=document.querySelector('#simTbl tbody');
+  th.innerHTML='<tr><th>区分</th><th>名前</th><th>ID</th><th>所属メイン</th><th>戦力(復活後)</th><th>削減見込み</th><th>撃破P</th><th>戦死</th><th>上位N内</th></tr>';
+  const rows=[...tg].sort((a,b)=>rev[b.id]-rev[a.id]);
+  tb.innerHTML=rows.slice(0,400).map(a=>{
+    const mn=a.main&&SELF.find(x=>x.id===a.main);
+    return`<tr><td>${KLBL[kindOf(a)]}</td><td><b>${a.name}</b></td><td class="mu">${a.id}</td><td class="mu">${mn?mn.name:(a.main||'―')}</td><td>${M(rev[a.id])}</td><td class="am">${M(a.cur*cut)}</td><td>${man(a.kp)}</td><td>${man(a.dead)}</td><td>${topSet.has(a.id)?'<span class="ok">○</span>':'<span class="mu">―</span>'}</td></tr>`}).join('')||'<tr><td colspan="9" class="mu" style="text-align:center;padding:20px">対象なし</td></tr>';
+  document.getElementById('simCount').textContent='（'+tg.length+'名'+(rows.length>400?' ・ 表示は400件まで':'')+'）';
+}
+function simList(){
+  const cut=V('pCut')/100;
+  return[['区分','ID','名前','所属メインID','戦力','削減見込み','撃破P','戦死','上位N内']].concat(
+    SIMCACHE.list.map(a=>[kindOf(a),a.id,a.name,a.main,Math.round(revived(a)),Math.round(a.cur*cut),a.kp,a.dead,SIMCACHE.inTop.has(a.id)?1:0]))}
+/* ===== 個票 ===== */
+function dirFiltered(){
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  const fk=document.getElementById('fKind').value,fa=document.getElementById('fAct').value;
+  const lo=V('fLo')*1e6,hi=V('fHi')*1e6;
+  return SELF.filter(a=>{
+    if(q&&!(a.id.includes(q)||a.name.toLowerCase().includes(q)))return false;
+    if(fk&&kindOf(a)!==fk)return false;
+    if(fa!==''&&String(actOf(a,a.pw)?1:0)!==fa)return false;
+    if(lo&&a.pw<lo)return false;
+    if(hi&&a.pw>hi)return false;
+    return true})}
+function renderDir(){
+  if(!SELF.length)return;
+  const cols=[['kind','区分'],['name','名前'],['id','ID'],['pw','戦力(開始)'],['cur','現在値'],['kp','撃破P'],['dead','戦死'],['t5','T5戦死'],['t4','T4戦死'],['tgt','目標KP'],['act','稼働']];
+  const th=document.querySelector('#dirTbl thead');
+  th.innerHTML='<tr>'+cols.map(([k,l])=>`<th data-k="${k}">${l}${dirSort.k===k?(dirSort.d<0?' ▼':' ▲'):''}</th>`).join('')+'</tr>';
+  th.querySelectorAll('th').forEach(t=>t.onclick=()=>{const k=t.dataset.k;
+    if(dirSort.k===k)dirSort.d*=-1;else{dirSort.k=k;dirSort.d=-1}renderDir()});
+  const val=(a,k)=>k==='kind'?kindOf(a):(k==='act'?(actOf(a,a.pw)?1:0):a[k]);
+  const list=dirFiltered().sort((a,b)=>{
+    const av=val(a,dirSort.k),bv=val(b,dirSort.k);
+    if(typeof av==='string')return av.localeCompare(bv)*dirSort.d;
+    return(av-bv)*dirSort.d});
+  document.querySelector('#dirTbl tbody').innerHTML=list.slice(0,700).map(a=>
+    `<tr><td>${KLBL[kindOf(a)]}</td><td><b>${a.name}</b></td><td class="mu">${a.id}</td><td>${M(a.pw)}</td><td class="mu">${M(a.cur)}</td><td>${man(a.kp)}</td><td>${man(a.dead)}</td><td class="mu">${man(a.d[0])}</td><td class="mu">${man(a.d[1])}</td><td class="mu">${a.tgt?man(a.tgt):'―'}</td><td>${actOf(a,a.pw)?'<span class="ok">○</span>':'<span class="mu">―</span>'}</td></tr>`).join('');
+  document.getElementById('dirCount').textContent='（'+list.length+'名該当）';
+}
+function dirList(){
+  return[['区分','ID','名前','戦力(開始)','現在値','撃破P','戦死','T5戦死','T4戦死','目標KP','稼働','所属メインID']].concat(
+    dirFiltered().map(a=>[kindOf(a),a.id,a.name,a.pw,a.cur,a.kp,a.dead,a.d[0],a.d[1],a.tgt,actOf(a,a.pw)?1:0,a.main]))}
+/* ===== サブ分析 ===== */
+function subAgg(){
+  const g={};
+  SELF.filter(a=>a.sub).forEach(a=>{(g[a.main]=g[a.main]||[]).push(a)});
+  return Object.entries(g).map(([m,v])=>{
+    const mn=SELF.find(x=>x.id===m);
+    const act=v.filter(a=>actOf(a,a.pw));
+    return{m,name:mn?mn.name:'（ポータル外）',n:v.length,act:act.length,
+      pw:v.reduce((s,a)=>s+a.pw,0),dead:v.reduce((s,a)=>s+a.dead,0),kp:v.reduce((s,a)=>s+a.kp,0),
+      idlePw:v.filter(a=>!actOf(a,a.pw)).reduce((s,a)=>s+a.pw,0)}}).sort((a,b)=>b.pw-a.pw)}
+function renderSubs(){
+  if(!SELF.length)return;
+  const subs=SELF.filter(a=>a.sub),act=subs.filter(a=>actOf(a,a.pw));
+  document.getElementById('subKpis').innerHTML=[
+    ['登録サブ',subs.length+' 名','戦力 '+B(subs.reduce((s,a)=>s+a.pw,0))],
+    ['稼働サブ',act.length+' 名','稼働率 '+Math.round(act.length/subs.length*100)+'%'],
+    ['サブの戦死',man(subs.reduce((s,a)=>s+a.dead,0)),'王国全体の'+Math.round(subs.reduce((s,a)=>s+a.dead,0)/SELF.reduce((s,a)=>s+a.dead,0)*100)+'%'],
+    ['無稼働サブの戦力',B(subs.filter(a=>!actOf(a,a.pw)).reduce((s,a)=>s+a.pw,0)),'眠っている分']
+  ].map(([l,v,s])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+  const th=document.querySelector('#subTbl thead');
+  th.innerHTML='<tr><th>メイン</th><th>メインID</th><th>サブ数</th><th>稼働</th><th>稼働率</th><th>サブ戦力計</th><th>無稼働分の戦力</th><th>サブ戦死計</th><th>サブ撃破計</th></tr>';
+  document.querySelector('#subTbl tbody').innerHTML=subAgg().map(r=>
+    `<tr><td><b>${r.name}</b></td><td class="mu">${r.m}</td><td>${r.n}</td><td>${r.act}</td><td class="${r.act/r.n>=0.5?'ok':'ng'}">${Math.round(r.act/r.n*100)}%</td><td>${M(r.pw)}</td><td class="am">${M(r.idlePw)}</td><td>${man(r.dead)}</td><td>${man(r.kp)}</td></tr>`).join('');
+}
+function subList(){
+  return[['メインID','メイン名','サブ数','稼働数','サブ戦力計','無稼働分の戦力','サブ戦死計','サブ撃破計']].concat(
+    subAgg().map(r=>[r.m,r.name,r.n,r.act,r.pw,r.idlePw,r.dead,r.kp]))}
+/* ===== CSV ===== */
+function exportCSV(rows,name){
+  const esc=v=>{v=String(v??'');return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const csv='﻿'+rows.map(r=>r.map(esc).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='KVK20_'+name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click()}
+/* ===== タブ・イベント ===== */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+t.dataset.tab).classList.add('active');
+  recalc()});
+['pA','pB','pN','pRev','pBands','pMinPw','pNorm'].forEach(id=>
+  document.getElementById(id).addEventListener('change',recalc));
+['tRegSub','tUnreg','tMainIdle','tMainLow'].forEach(id=>
+  document.getElementById(id).addEventListener('change',recalc));
+loadData();
+</script>
+</body>
+</html>
