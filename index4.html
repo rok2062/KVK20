@@ -388,9 +388,23 @@ function renderSim(){
   if(charts.sim)charts.sim.destroy();
   charts.sim=new Chart(document.getElementById('simChart'),{type:'bar',
     data:{labels:['現状(復活後)','削除後'],datasets:[{data:[base/1e9,t/1e9],backgroundColor:['#96a2ba','#3ecf8e'],borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:c=>c.raw.toFixed(2)+'B（'+rankOf(c.raw)+'位相当）'}}},
-      scales:{x:{ticks:{color:'#96a2ba',callback:v=>v+'B'},grid:{color:'#263149'}},y:{ticks:{color:'#96a2ba'},grid:{display:false}}}}});
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      layout:{padding:{right:8}},
+      plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>c.raw.toFixed(2)+'B（全国 '+rankOf(c.raw)+'位相当）'}}},
+      scales:{x:{ticks:{color:'#96a2ba',callback:v=>v+'B'},grid:{color:'#263149'}},y:{ticks:{color:'#96a2ba'},grid:{display:false}}}},
+    plugins:[{id:'rankLbl',afterDatasetsDraw(ch){
+      const ctx=ch.ctx,meta=ch.getDatasetMeta(0);
+      meta.data.forEach((bar,i)=>{
+        const v=ch.data.datasets[0].data[i];
+        const txt=v.toFixed(2)+'B ／ 全国 '+rankOf(v)+'位相当';
+        ctx.save();ctx.font='bold 14px "Noto Sans JP",Meiryo,sans-serif';
+        ctx.textBaseline='middle';
+        const w=ctx.measureText(txt).width;
+        const inside=(bar.x-ch.chartArea.left)>w+24;
+        if(inside){ctx.fillStyle='#0b0f1a';ctx.textAlign='right';ctx.fillText(txt,bar.x-12,bar.y);}
+        else{ctx.fillStyle='#F2ECE0';ctx.textAlign='left';ctx.fillText(txt,bar.x+10,bar.y);}
+        ctx.restore();});}}]});
   // table
   const th=document.querySelector('#simTbl thead'),tb=document.querySelector('#simTbl tbody');
   th.innerHTML='<tr><th>区分</th><th>名前</th><th>ID</th><th>所属メイン</th><th>戦力(復活後)</th><th>削減見込み</th><th>撃破P</th><th>戦死</th><th>上位N内</th></tr>';
