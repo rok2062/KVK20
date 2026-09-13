@@ -221,8 +221,12 @@ async function loadFromSheet(){
   const st=$('#status'); st.textContent='スプレッドシートを読み込み中…';
   const dates=dateRange();
   const [r19,r20,b19,b20,rSubs,...rDaily]=await Promise.all([fetchRows(CONFIG.sheets.k19,true),fetchRows(CONFIG.sheets.k20,true),fetchRows(CONFIG.sheets.k19base,false),fetchRows(CONFIG.sheets.k20base,false),fetchRows(CONFIG.sheets.subs,false),...dates.map(d=>fetchRows(d,false))]);
-  const k19=mergeBase(statsFromRows(r19,CONFIG.sheets.k19,true),statsFromRows(b19,CONFIG.sheets.k19base,false));
-  const k20=mergeBase(statsFromRows(r20,CONFIG.sheets.k20,true),statsFromRows(b20,CONFIG.sheets.k20base,false));
+  const s19=statsFromRows(r19,CONFIG.sheets.k19,true), s20=statsFromRows(r20,CONFIG.sheets.k20,true);
+  const sb19=statsFromRows(b19,CONFIG.sheets.k19base,false), sb20=statsFromRows(b20,CONFIG.sheets.k20base,false);
+  const k19=mergeBase(s19,sb19), k20=mergeBase(s20,sb20);
+  const cnt=o=>o?Object.keys(o).length+'件':'見つからず';
+  const loaded=`${CONFIG.sheets.k19} ${cnt(s19)} / ${CONFIG.sheets.k19base} ${cnt(sb19)} / ${CONFIG.sheets.k20} ${cnt(s20)} / ${CONFIG.sheets.k20base} ${cnt(sb20)} / ${CONFIG.sheets.subs} ${rSubs?rSubs.length-1+'件':'見つからず'}`;
+  const warn=(!sb19||!sb20)?`【注意】${!sb19?CONFIG.sheets.k19base:''}${!sb19&&!sb20?'・':''}${!sb20?CONFIG.sheets.k20base:''} シートを取得できないため KVK19/KVK20 シートの戦力を使用中。シート名と共有設定を確認してください。`:'';
   const daily={}; rDaily.forEach((r,i)=>{ const s=statsFromRows(r,dates[i],false); if(s&&Object.keys(s).length) daily[dates[i]]=s; });
   if(!Object.keys(daily).length){ const s=statsFromRows(await fetchRows(CONFIG.sheets.now,true),CONFIG.sheets.now,true); daily[dates[dates.length-1]]=s; }
   const subs={}; if(rSubs) for(const r of rSubs.slice(1)){ const id=normId(r[0]); if(id) subs[id]={name:(r[1]||'').trim(),mainId:normId(r[2]),mainName:(r[3]||'').trim()}; }
@@ -237,7 +241,7 @@ async function loadFromSheet(){
     acc.h={}; for(const dt of ds) if(daily[dt][id]) acc.h[dt]=daily[dt][id].p;
     accounts.push(acc);
   }
-  return { snapshots:[{key:'k19',label:'KVK19',period:CONFIG.periods.k19},{key:'k20',label:'KVK20',period:CONFIG.periods.k20},{key:'now',label:'現在',period:fmtDate(ds[ds.length-1])}], accounts, dates:ds, subCount:accounts.filter(a=>a.type==='sub').length, source:'Googleスプレッドシート' };
+  return { snapshots:[{key:'k19',label:'KVK19',period:CONFIG.periods.k19},{key:'k20',label:'KVK20',period:CONFIG.periods.k20},{key:'now',label:'現在',period:fmtDate(ds[ds.length-1])}], accounts, dates:ds, subCount:accounts.filter(a=>a.type==='sub').length, source:`Googleスプレッドシート（${loaded}、日付シート ${ds.join(', ')}）`, warn };
 }
 
 // ---------- 共通 ----------
@@ -374,7 +378,8 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  st.textContent=`取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:8px 0 0'; w.textContent=DATA.warn; st.before(w); }
+  st.textContent=`ページ版: base対応 v2　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
