@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2062 戦力ウォッチ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --ink:#1B2430; --muted:#5D6873; --line:#D5DBE2; --line-strong:#B8C1CB;
+  --accent:#1D5C8A; --accent-ink:#FFFFFF; --accent-soft:#E3EEF7;
+  --down:#B93A2E; --down-soft:#F9E5E2; --up:#1F7A45; --up-soft:#E2F3E8; --flat:#6B7580; --flat-soft:#EAEDF0; --absent:#A86A0C; --absent-soft:#FBEFD9;
+  --shadow:0 1px 2px rgba(20,30,40,.06),0 4px 14px rgba(20,30,40,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#11161C; --surface:#1A2129; --surface-2:#202932; --ink:#E4E9EE; --muted:#97A3AF; --line:#2B353F; --line-strong:#3D4954;
+    --accent:#6FB1DF; --accent-ink:#0E1A26; --accent-soft:#1B3040;
+    --down:#F08A7C; --down-soft:#3A201D; --up:#7BD39A; --up-soft:#193324; --flat:#A2ACB6; --flat-soft:#2A323B; --absent:#F0B45A; --absent-soft:#3A2D14;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11161C; --surface:#1A2129; --surface-2:#202932; --ink:#E4E9EE; --muted:#97A3AF; --line:#2B353F; --line-strong:#3D4954;
+  --accent:#6FB1DF; --accent-ink:#0E1A26; --accent-soft:#1B3040;
+  --down:#F08A7C; --down-soft:#3A201D; --up:#7BD39A; --up-soft:#193324; --flat:#A2ACB6; --flat-soft:#2A323B; --absent:#F0B45A; --absent-soft:#3A2D14;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;font-size:14px;line-height:1.5;padding-inline:16px;padding-block:0 48px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+header{max-width:1280px;margin:0 auto;padding-block:22px 12px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.01em;text-wrap:balance}
+h1 small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:2px}
+.periods{display:flex;flex-wrap:wrap;gap:8px}
+.period{display:flex;flex-direction:column;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);min-width:132px}
+.period b{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.period span{font-size:12px;color:var(--muted)}
+.period em{font-style:normal;font-size:12px;color:var(--ink)}
+nav{max-width:1280px;margin:0 auto;display:flex;gap:2px;border-bottom:2px solid var(--line);overflow-x:auto}
+nav button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-2px;padding:10px 14px;font:inherit;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+nav button:hover{color:var(--ink)}
+nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{max-width:1280px;margin:0 auto;padding-top:18px}
+section[hidden]{display:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);border-radius:8px 8px 0 0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.field input,.field select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:6px 8px;min-height:34px}
+.field input[type=number]{width:120px;font-family:"IBM Plex Mono",monospace}
+.field input[type=search]{width:190px}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:5px;overflow:hidden}
+.seg button{appearance:none;border:0;background:var(--surface);color:var(--ink);font:inherit;padding:6px 11px;cursor:pointer;border-right:1px solid var(--line-strong)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.check{display:flex;align-items:center;gap:6px;min-height:34px;font-size:13px}
+.check input{accent-color:var(--accent)}
+.actions{margin-left:auto;display:flex;gap:8px;align-items:flex-end}
+.btn{appearance:none;font:inherit;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:5px;padding:6px 12px;cursor:pointer;min-height:34px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.summary{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.summary b{color:var(--ink);font-family:"IBM Plex Mono",monospace;font-weight:500}
+.tablewrap{overflow-x:auto;max-height:72vh;overflow-y:auto;border-radius:0 0 8px 8px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+thead th{position:sticky;top:0;z-index:1;background:var(--surface);border-bottom:1px solid var(--line-strong);padding:8px 10px;text-align:left;font-weight:500;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none;font-size:12px}
+thead th.num,td.num{text-align:right}
+thead th[aria-sort="ascending"]::after{content:" ▲";color:var(--accent)}
+thead th[aria-sort="descending"]::after{content:" ▼";color:var(--accent)}
+thead th.grp{border-left:1px solid var(--line)}
+td{padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+td.grp{border-left:1px solid var(--line)}
+tbody tr:hover td{background:var(--surface-2)}
+td.name{font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+td.id{color:var(--muted);font-size:12px}
+td.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.rank{display:inline-block;min-width:34px;color:var(--muted);font-size:12px}
+.rank.top{color:var(--accent);font-weight:500}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;line-height:18px}
+.pill.down{background:var(--down-soft);color:var(--down)}
+.pill.up{background:var(--up-soft);color:var(--up)}
+.pill.flat{background:var(--flat-soft);color:var(--flat)}
+.pill.absent{background:var(--absent-soft);color:var(--absent)}
+.pill.na{background:var(--flat-soft);color:var(--muted)}
+.delta.down{color:var(--down)}.delta.up{color:var(--up)}.delta.flat{color:var(--muted)}
+.absent-cell{color:var(--absent);font-weight:500}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow)}
+.tile .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.tile .v{font-family:"IBM Plex Mono",monospace;font-size:26px;font-weight:500;margin-top:4px}
+.tile .s{font-size:12px;color:var(--muted);margin-top:2px}
+.note{max-width:68ch;color:var(--muted);font-size:13px;margin:0 0 14px}
+.note code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+.matrix{width:auto;min-width:0}
+.matrix td,.matrix th{padding:6px 14px}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+#status{max-width:1280px;margin:8px auto 0;font-size:12px;color:var(--muted)}
+#status.err{color:var(--down)}
+@media (max-width:640px){
+  header{padding-block:16px 8px}
+  .period{min-width:0;flex:1}
+  .actions{margin-left:0}
+  .tablewrap{max-height:none}
+}
+@media (prefers-reduced-motion:no-preference){ nav button,.btn,.seg button{transition:color .12s,background-color .12s,border-color .12s} }
+</style>
+</head>
+<body>
+<script>
+// ===== 設定 =====================================================
+// Googleスプレッドシートから直接読む場合はIDを入れる（共有設定を「リンクを知っている全員が閲覧可」にすること）。
+// 空文字なら同じフォルダの data.js（build_data.py で生成）を使う。
+const CONFIG = {
+  sheetId: '1P432N6b3gd0Pd4pM22EAUoVHnMZJhKVLO9bsBDK-1Co',
+  sheets: { k19: 'KVK19', k20: 'KVK20', now: '現在' },
+  periods: { k19: '2026/04/10〜05/30', k20: '2026/07/06〜08/22', now: '2026/09/12' },
+  // 日別シート: 「20260913」のように YYYYMMDD 名のシートを毎日追加すると、最新の日付シートを「現在」として扱い、日別推移タブに並べる。
+  // 日付シートが1枚も無ければ CONFIG.sheets.now（現在）シートを使う。
+  dailyStart: '2026-09-12',   // この日から今日までの YYYYMMDD シートを探す
+  dailyEnd: '',               // 空なら今日まで
+  defaultThreshold: 4500,   // 万
+  defaultTolerance: 100,    // 万 (「変化なし」判定の許容幅)
+  topN: 300,
+};
+</script>
+<script src="data.js"></script>
+
+<header>
+  <h1>2062 戦力ウォッチ <small>KVK19 / KVK20 / 現在 の戦力推移を比較</small></h1>
+  <div class="periods" id="periods"></div>
+</header>
+<nav role="tablist" id="tabs">
+  <button role="tab" aria-selected="true" data-tab="overview">概要</button>
+  <button role="tab" aria-selected="false" data-tab="top">戦力TOP300</button>
+  <button role="tab" aria-selected="false" data-tab="low">KVK19 4500万以下の減少</button>
+  <button role="tab" aria-selected="false" data-tab="judge">閾値指定の増減判定</button>
+  <button role="tab" aria-selected="false" data-tab="daily">日別推移</button>
+</nav>
+<main>
+  <section id="tab-overview">
+    <div class="tiles" id="tiles"></div>
+    <div class="panel">
+      <div class="summary">在籍マトリクス（KVK19 / KVK20 / 現在 のどこに存在するか）</div>
+      <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
+    </div>
+    <p class="note" style="margin-top:16px">順位は各時点の全アカウントを戦力降順に並べたもの。差分は「後の時点 − 前の時点」。<b>不在</b>はその時点のエクスポートにIDが無いことを示し、脱退・移民・除外のどれかは区別できない。名前は最新時点のものを表示。</p>
+  </section>
+
+  <section id="tab-top" hidden>
+    <div class="panel">
+      <div class="controls">
+        <div class="field"><label>TOP300の基準</label>
+          <div class="seg" id="topBase">
+            <button aria-pressed="true" data-v="now">現在</button><button aria-pressed="false" data-v="k20">KVK20</button><button aria-pressed="false" data-v="k19">KVK19</button><button aria-pressed="false" data-v="any">いずれか</button>
+          </div></div>
+        <div class="field"><label>上位N</label><input type="number" id="topN" value="300" min="1" step="10"></div>
+        <label class="check"><input type="checkbox" id="topScope" checked>KVK19かKVK20に存在するアカウントのみ</label>
+        <div class="field"><label>検索</label><input type="search" id="topSearch" placeholder="名前 / ID"></div>
+        <div class="actions"><button class="btn" id="topCsv">CSV</button></div>
+      </div>
+      <div class="summary" id="topSummary"></div>
+      <div class="tablewrap"><table id="topTable"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-low" hidden>
+    <p class="note">KVK19時点の戦力が閾値以下のアカウントを対象に、<b>KVK19→KVK20</b> と <b>KVK20→現在</b> のそれぞれで戦力を下げたものを抽出する。KVK20に不在のアカウントは判定できないので <span class="pill absent">不在</span> として一覧に残す。</p>
+    <div class="panel">
+      <div class="controls">
+        <div class="field"><label>KVK19戦力の上限（万）</label><input type="number" id="lowThr" value="4500" min="0" step="100"></div>
+        <div class="field"><label>変化なし判定 ±（万）</label><input type="number" id="lowTol" value="100" min="0" step="10"></div>
+        <div class="field"><label>抽出</label>
+          <div class="seg" id="lowMode">
+            <button aria-pressed="false" data-v="all">全て</button><button aria-pressed="true" data-v="d1">19→20で減少</button><button aria-pressed="false" data-v="d2">20→現在で減少</button><button aria-pressed="false" data-v="both">両方で減少</button><button aria-pressed="false" data-v="either">どちらかで減少</button><button aria-pressed="false" data-v="absent">不在あり</button>
+          </div></div>
+        <div class="field"><label>検索</label><input type="search" id="lowSearch" placeholder="名前 / ID"></div>
+        <div class="actions"><button class="btn" id="lowCsv">CSV</button></div>
+      </div>
+      <div class="summary" id="lowSummary"></div>
+      <div class="tablewrap"><table id="lowTable"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-judge" hidden>
+    <p class="note">基準時点で戦力が閾値以下のアカウントについて、比較先の時点で <span class="pill down">下げ</span> / <span class="pill up">上げ</span> / <span class="pill flat">変化なし</span> のどれかを判定する。比較先に居なければ <span class="pill absent">不在</span>。</p>
+    <div class="panel">
+      <div class="controls">
+        <div class="field"><label>基準時点</label><select id="jBase"><option value="k19">KVK19</option><option value="k20">KVK20</option><option value="now">現在</option></select></div>
+        <div class="field"><label>基準戦力の上限（万）</label><input type="number" id="jThr" value="4500" min="0" step="100"></div>
+        <div class="field"><label>比較先</label><select id="jTarget"><option value="k20">KVK20</option><option value="now" selected>現在</option><option value="k19">KVK19</option></select></div>
+        <div class="field"><label>変化なし判定 ±（万）</label><input type="number" id="jTol" value="100" min="0" step="10"></div>
+        <div class="field"><label>表示</label>
+          <div class="seg" id="jMode">
+            <button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="down">下げ</button><button aria-pressed="false" data-v="up">上げ</button><button aria-pressed="false" data-v="flat">変化なし</button><button aria-pressed="false" data-v="absent">不在</button>
+          </div></div>
+        <label class="check"><input type="checkbox" id="jScope" checked>KVK19かKVK20に存在するアカウントのみ</label>
+        <div class="field"><label>検索</label><input type="search" id="jSearch" placeholder="名前 / ID"></div>
+        <div class="actions"><button class="btn" id="jCsv">CSV</button></div>
+      </div>
+      <div class="summary" id="jSummary"></div>
+      <div class="tablewrap"><table id="jTable"></table></div>
+    </div>
+  </section>
+  <section id="tab-daily" hidden>
+    <p class="note">日付シート（<code>YYYYMMDD</code>）を日ごとに並べ、<b>前日比</b>で下げたセルを赤、上げたセルを緑で示す。基準日から最新日までの累計変化で 下げ/上げ/変化なし を判定し、最新日に居ないアカウントは <span class="pill absent">不在</span>。</p>
+    <div class="panel">
+      <div class="controls">
+        <div class="field"><label>基準日</label><select id="dBase"></select></div>
+        <div class="field"><label>基準日の戦力上限（万・0で無制限）</label><input type="number" id="dThr" value="0" min="0" step="100"></div>
+        <div class="field"><label>変化なし判定 ±（万）</label><input type="number" id="dTol" value="100" min="0" step="10"></div>
+        <div class="field"><label>表示</label>
+          <div class="seg" id="dMode">
+            <button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="down">累計で下げ</button><button aria-pressed="false" data-v="anyday">どこかの日で下げ</button><button aria-pressed="false" data-v="up">上げ</button><button aria-pressed="false" data-v="flat">変化なし</button><button aria-pressed="false" data-v="absent">不在</button>
+          </div></div>
+        <label class="check"><input type="checkbox" id="dScope" checked>KVK19かKVK20に存在するアカウントのみ</label>
+        <div class="field"><label>検索</label><input type="search" id="dSearch" placeholder="名前 / ID"></div>
+        <div class="actions"><button class="btn" id="dCsv">CSV</button></div>
+      </div>
+      <div class="summary" id="dSummary"></div>
+      <div class="tablewrap"><table id="dTable"></table></div>
+    </div>
+  </section>
+</main>
+<div id="status"></div>
+
+<script>
+(function(){
+'use strict';
+const SNAPS = ['k19','k20','now'];
+const LABEL = { k19:'KVK19', k20:'KVK20', now:'現在' };
+const $ = s => document.querySelector(s);
+const fmt = n => n==null ? '' : n.toLocaleString('ja-JP');
+const fmtD = n => (n>0?'+':'') + fmt(n);
+const MAN = 10000;
+let DATA = null;
+
+// ---------- データ読み込み ----------
+function parseCSV(text){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=''; }
+    else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=''; }
+    else if(c!=='\r') f+=c;
+  }
+  if(f.length||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function buildFromRaw(raw, daily){ // raw: {k19:{id:{name,p,...}},...}  daily: {YYYYMMDD:{id:{name,p,...}}}
+  const dates=Object.keys(daily||{}).sort();
+  if(dates.length) raw.now=daily[dates[dates.length-1]];
+  for(const k of SNAPS){ const d=raw[k]; Object.keys(d).sort((a,b)=>d[b].p-d[a].p).forEach((id,i)=>d[id].rank=i+1); }
+  const ids=new Set(); SNAPS.forEach(k=>Object.keys(raw[k]).forEach(id=>ids.add(id))); dates.forEach(dt=>Object.keys(daily[dt]).forEach(id=>ids.add(id)));
+  const accounts=[];
+  for(const id of ids){
+    const acc={id, name:(raw.now[id]||raw.k20[id]||raw.k19[id]||daily[dates.find(dt=>daily[dt][id])][id]).name};
+    for(const k of SNAPS) if(raw[k][id]) acc[k]=raw[k][id];
+    if(dates.length){ acc.h={}; for(const dt of dates) if(daily[dt][id]) acc.h[dt]=daily[dt][id].p; }
+    accounts.push(acc);
+  }
+  const periods={...CONFIG.periods}; if(dates.length) periods.now=fmtDate(dates[dates.length-1]);
+  return { snapshots:SNAPS.map(k=>({key:k,label:LABEL[k],period:periods[k]})), accounts, dates };
+}
+const fmtDate=d=>`${d.slice(0,4)}/${d.slice(4,6)}/${d.slice(6,8)}`;
+function dateRange(){
+  const toYMD=d=>d.toISOString().slice(0,10).replace(/-/g,'');
+  const a=new Date(CONFIG.dailyStart+'T00:00:00Z'), b=CONFIG.dailyEnd?new Date(CONFIG.dailyEnd+'T00:00:00Z'):new Date(Date.now()+9*3600e3);
+  const out=[]; for(let d=a; toYMD(d)<=toYMD(b) && out.length<120; d=new Date(d.getTime()+86400e3)) out.push(toYMD(d)); return out;
+}
+async function fetchSheet(name, required){
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
+  let res; try{ res=await fetch(url); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
+  if(!res.ok){ if(required) throw new Error(`${name} シートを取得できません (${res.status})`); return null; }
+  const rows=parseCSV(await res.text()); if(!rows.length) return null;
+  const h=rows[0].map(s=>s.trim());
+  const ix=n=>h.indexOf(n); const I={id:ix('キャラクターID'),name:ix('キャラクターニックネーム'),p:ix('現在の戦力'),max:ix('過去最大戦力'),kp:ix('撃破ポイント合計'),d5:ix('T5戦死'),d4:ix('T4戦死')};
+  if(I.id<0||I.p<0){ if(required) throw new Error(`${name} シートの見出しが想定と違います`); return null; }
+  const num=v=>{const n=parseFloat(String(v??'').replace(/[,\s]/g,''));return isNaN(n)?0:Math.round(n);};
+  const out={};
+  for(const r of rows.slice(1)){ const id=(r[I.id]||'').trim(); if(!id) continue;
+    out[id]={name:(r[I.name]||'').trim(),p:num(r[I.p]),max:num(r[I.max]),kp:num(r[I.kp]),dead:num(r[I.d5])+num(r[I.d4])}; }
+  return out;
+}
+async function loadFromSheet(){
+  const st=$('#status');
+  const [k19,k20]=await Promise.all([fetchSheet(CONFIG.sheets.k19,true),fetchSheet(CONFIG.sheets.k20,true)]);
+  const dates=dateRange(); st.textContent=`日付シートを確認中… (${dates[0]}〜${dates[dates.length-1]})`;
+  const found=await Promise.all(dates.map(d=>fetchSheet(d,false).then(r=>[d,r])));
+  const daily={}; for(const [d,r] of found) if(r&&Object.keys(r).length) daily[d]=r;
+  const raw={k19,k20,now:null};
+  if(!Object.keys(daily).length) raw.now=await fetchSheet(CONFIG.sheets.now,true);
+  return buildFromRaw(raw,daily);
+}
+
+// ---------- 共通 ----------
+const inKvk = a => !!(a.k19||a.k20);
+function judge(a, from, to, tol){ // 戦力変化の判定
+  if(!a[from]) return 'na';
+  if(!a[to]) return 'absent';
+  const d=a[to].p-a[from].p;
+  if(Math.abs(d)<=tol) return 'flat';
+  return d<0?'down':'up';
+}
+const PILL = { down:'下げ', up:'上げ', flat:'変化なし', absent:'不在', na:'—' };
+const pill = s => `<span class="pill ${s}">${PILL[s]}</span>`;
+function cellSnap(a,k,topN){
+  const s=a[k]; if(!s) return `<td class="grp absent-cell" colspan="2">不在</td>`;
+  return `<td class="grp num"><span class="rank ${s.rank<=topN?'top':''}">#${s.rank}</span></td><td class="num">${fmt(s.p)}</td>`;
+}
+function cellDelta(a,from,to,tol){
+  if(!a[from]||!a[to]) return `<td class="grp num delta flat">—</td>`;
+  const d=a[to].p-a[from].p, cls=Math.abs(d)<=tol?'flat':(d<0?'down':'up');
+  return `<td class="grp num delta ${cls}">${fmtD(d)}</td>`;
+}
+function matchSearch(a,q){ if(!q) return true; q=q.toLowerCase(); return a.name.toLowerCase().includes(q)||a.id.includes(q); }
+function seg(id, onChange){
+  const el=$(id); el.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+    el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); onChange(); });
+  return ()=>el.querySelector('[aria-pressed="true"]').dataset.v;
+}
+function downloadCSV(name, header, rows){
+  const esc=v=>{v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const csv='﻿'+[header,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+// 汎用テーブル描画（ソート付き）
+function makeTable(tableId, columns){
+  const table=$(tableId); let sortKey=null, sortDir=-1, lastRows=[];
+  table.addEventListener('click',e=>{ const th=e.target.closest('th'); if(!th||!th.dataset.key) return;
+    const k=th.dataset.key; if(sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=-1; } render(lastRows); });
+  function render(rows){
+    lastRows=rows;
+    if(sortKey){ const col=columns.find(c=>c.key===sortKey);
+      rows=[...rows].sort((a,b)=>{ const x=col.sort(a), y=col.sort(b);
+        if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
+        return (typeof x==='string'?x.localeCompare(y,'ja'):x-y)*sortDir; }); }
+    const head='<thead><tr>'+columns.map(c=>`<th data-key="${c.key}" class="${c.cls||''}" ${c.span?`colspan="${c.span}"`:''} aria-sort="${sortKey===c.key?(sortDir>0?'ascending':'descending'):'none'}">${c.label}</th>`).join('')+'</tr></thead>';
+    const body=rows.length?'<tbody>'+rows.map(a=>'<tr>'+columns.map(c=>c.cell(a)).join('')+'</tr>').join('')+'</tbody>':`<tbody><tr><td colspan="${columns.reduce((n,c)=>n+(c.span||1),0)}" class="empty">該当なし</td></tr></tbody>`;
+    table.innerHTML=head+body;
+  }
+  return { render, rows:()=>lastRows };
+}
+const colName = {key:'name',label:'名前',cell:a=>`<td class="name" title="${a.name.replace(/"/g,'&quot;')}">${a.name}</td>`,sort:a=>a.name};
+const colId   = {key:'id',label:'ID',cell:a=>`<td class="id mono">${a.id}</td>`,sort:a=>+a.id};
+const colSnap = (k,topN)=>({key:k,label:`${LABEL[k]} 順位 / 戦力`,cls:'grp num',span:2,cell:a=>cellSnap(a,k,topN()),sort:a=>a[k]?a[k].p:null});
+const colDelta= (f,t,tol)=>({key:`d_${f}_${t}`,label:`${LABEL[f]}→${LABEL[t]}`,cls:'grp num',cell:a=>cellDelta(a,f,t,tol()),sort:a=>(a[f]&&a[t])?a[t].p-a[f].p:null});
+const colJudge= (f,t,tol)=>({key:`j_${f}_${t}`,label:'判定',cell:a=>`<td>${pill(judge(a,f,t,tol()))}</td>`,sort:a=>({down:0,up:1,flat:2,absent:3,na:4})[judge(a,f,t,tol())]});
+const csvRow = (a,tol)=>{ const s=k=>a[k]?[a[k].rank,a[k].p]:['不在','']; const d=(f,t)=>(a[f]&&a[t])?a[t].p-a[f].p:'';
+  return [a.name,a.id,...s('k19'),...s('k20'),...s('now'),d('k19','k20'),PILL[judge(a,'k19','k20',tol)],d('k20','now'),PILL[judge(a,'k20','now',tol)]]; };
+const CSV_HEAD=['名前','ID','KVK19順位','KVK19戦力','KVK20順位','KVK20戦力','現在順位','現在戦力','Δ19→20','判定19→20','Δ20→現在','判定20→現在'];
+
+// ---------- 概要 ----------
+function renderOverview(){
+  const A=DATA.accounts, cnt=k=>A.filter(a=>a[k]).length;
+  const kvk=A.filter(inKvk), goneNow=kvk.filter(a=>!a.now).length, gone20=A.filter(a=>a.k19&&!a.k20).length, newNow=A.filter(a=>!inKvk(a)).length;
+  const low=A.filter(a=>a.k19&&a.k19.p<=CONFIG.defaultThreshold*MAN);
+  const tol=CONFIG.defaultTolerance*MAN;
+  const tiles=[
+    ['KVK19 アカウント数',cnt('k19'),DATA.snapshots[0].period],['KVK20 アカウント数',cnt('k20'),DATA.snapshots[1].period],['現在 アカウント数',cnt('now'),DATA.snapshots[2].period],
+    ['KVK19/20 いずれか在籍',kvk.length,`うち現在不在 ${goneNow}`],['KVK19→KVK20 で不在',gone20,'KVK19には居たがKVK20に無い'],['現在のみ（KVK未経験）',newNow,'一覧では既定で除外'],
+    [`KVK19 ${CONFIG.defaultThreshold}万以下`,low.length,`19→20下げ ${low.filter(a=>judge(a,'k19','k20',tol)==='down').length} / 20→現在下げ ${low.filter(a=>judge(a,'k20','now',tol)==='down').length}`],
+  ];
+  $('#tiles').innerHTML=tiles.map(([k,v,s])=>`<div class="tile"><div class="k">${k}</div><div class="v">${fmt(v)}</div><div class="s">${s}</div></div>`).join('');
+  const combos=[[1,1,1],[1,1,0],[1,0,1],[0,1,1],[1,0,0],[0,1,0],[0,0,1]];
+  const mk=v=>v?'<span class="pill up">在</span>':'<span class="pill absent">不在</span>';
+  $('#matrix').innerHTML='<thead><tr><th>KVK19</th><th>KVK20</th><th>現在</th><th class="num">アカウント数</th></tr></thead><tbody>'+combos.map(([a,b,c])=>{
+    const n=A.filter(x=>!!x.k19===!!a&&!!x.k20===!!b&&!!x.now===!!c).length;
+    return `<tr><td>${mk(a)}</td><td>${mk(b)}</td><td>${mk(c)}</td><td class="num">${fmt(n)}</td></tr>`; }).join('')+'</tbody>';
+}
+
+// ---------- TOP300 ----------
+const topN=()=>Math.max(1,+$('#topN').value||300);
+const topT=makeTable('#topTable',[
+  {key:'rank',label:'#',cls:'num',cell:a=>`<td class="num rank-cell">${a._r||''}</td>`,sort:a=>a._r},
+  colName,colId,colSnap('k19',topN),colSnap('k20',topN),colSnap('now',topN),
+  colDelta('k19','k20',()=>0),colDelta('k20','now',()=>0),
+  {key:'rk',label:'順位変動 (19→現在)',cls:'grp num',cell:a=>{ if(!a.k19||!a.now) return '<td class="grp num delta flat">—</td>'; const d=a.k19.rank-a.now.rank; return `<td class="grp num delta ${d>0?'up':d<0?'down':'flat'}">${d>0?'↑':d<0?'↓':'±'}${Math.abs(d)}</td>`; },sort:a=>(a.k19&&a.now)?a.k19.rank-a.now.rank:null},
+]);
+const topBase=seg('#topBase',renderTop);
+function renderTop(){
+  const N=topN(), base=topBase(), scope=$('#topScope').checked, q=$('#topSearch').value.trim();
+  let rows=DATA.accounts.filter(a=>(!scope||inKvk(a))&&matchSearch(a,q));
+  const inTop=(a,k)=>a[k]&&a[k].rank<=N;
+  rows=rows.filter(a=>base==='any'?SNAPS.some(k=>inTop(a,k)):inTop(a,base));
+  const sortKey=base==='any'?'now':base;
+  rows.sort((a,b)=>(a[sortKey]?a[sortKey].rank:1e9)-(b[sortKey]?b[sortKey].rank:1e9));
+  rows.forEach((a,i)=>a._r=i+1);
+  const absent=k=>rows.filter(a=>!a[k]).length;
+  $('#topSummary').innerHTML=`<span>対象 <b>${rows.length}</b> 件</span><span>KVK19不在 <b>${absent('k19')}</b></span><span>KVK20不在 <b>${absent('k20')}</b></span><span>現在不在 <b>${absent('now')}</b></span>`+
+    (base!=='any'?`<span>${LABEL[base]} のTOP${N}に入るアカウント（KVK19/20未経験を除外中: ${scope?'はい':'いいえ'}）</span>`:`<span>いずれかの時点でTOP${N}に入ったアカウント</span>`);
+  topT.render(rows);
+}
+['#topN','#topScope','#topSearch'].forEach(s=>$(s).addEventListener('input',renderTop));
+$('#topCsv').addEventListener('click',()=>downloadCSV(`top${topN()}_${topBase()}.csv`,CSV_HEAD,topT.rows().map(a=>csvRow(a,0))));
+
+// ---------- KVK19 4500万以下 ----------
+const lowTol=()=>Math.max(0,+$('#lowTol').value||0)*MAN;
+const lowT=makeTable('#lowTable',[colName,colId,colSnap('k19',()=>CONFIG.topN),colSnap('k20',()=>CONFIG.topN),colSnap('now',()=>CONFIG.topN),
+  colDelta('k19','k20',lowTol),colJudge('k19','k20',lowTol),colDelta('k20','now',lowTol),colJudge('k20','now',lowTol)]);
+const lowMode=seg('#lowMode',renderLow);
+function renderLow(){
+  const thr=(+$('#lowThr').value||0)*MAN, tol=lowTol(), mode=lowMode(), q=$('#lowSearch').value.trim();
+  const base=DATA.accounts.filter(a=>a.k19&&a.k19.p<=thr);
+  const j1=a=>judge(a,'k19','k20',tol), j2=a=>judge(a,'k20','now',tol);
+  const c={d1:base.filter(a=>j1(a)==='down').length,d2:base.filter(a=>j2(a)==='down').length,both:base.filter(a=>j1(a)==='down'&&j2(a)==='down').length,ab:base.filter(a=>!a.k20||!a.now).length};
+  let rows=base.filter(a=>matchSearch(a,q)).filter(a=>{
+    switch(mode){ case 'd1':return j1(a)==='down'; case 'd2':return j2(a)==='down'; case 'both':return j1(a)==='down'&&j2(a)==='down';
+      case 'either':return j1(a)==='down'||j2(a)==='down'; case 'absent':return !a.k20||!a.now; default:return true; } });
+  rows.sort((a,b)=>b.k19.p-a.k19.p);
+  $('#lowSummary').innerHTML=`<span>KVK19 ${fmt(thr/MAN)}万以下 <b>${base.length}</b> 件</span><span>19→20で下げ <b>${c.d1}</b></span><span>20→現在で下げ <b>${c.d2}</b></span><span>両方で下げ <b>${c.both}</b></span><span>KVK20か現在に不在 <b>${c.ab}</b></span><span>表示 <b>${rows.length}</b> 件</span>`;
+  lowT.render(rows);
+}
+['#lowThr','#lowTol','#lowSearch'].forEach(s=>$(s).addEventListener('input',renderLow));
+$('#lowCsv').addEventListener('click',()=>downloadCSV(`kvk19_under${$('#lowThr').value}man_${lowMode()}.csv`,CSV_HEAD,lowT.rows().map(a=>csvRow(a,lowTol()))));
+
+// ---------- 閾値指定の増減判定 ----------
+const jTol=()=>Math.max(0,+$('#jTol').value||0)*MAN;
+let jCols=null, jT=null;
+function buildJudgeTable(){
+  const f=$('#jBase').value, t=$('#jTarget').value;
+  const others=SNAPS.filter(k=>k!==f&&k!==t);
+  jT=makeTable('#jTable',[colName,colId,colSnap(f,()=>CONFIG.topN),colSnap(t,()=>CONFIG.topN),colDelta(f,t,jTol),colJudge(f,t,jTol),
+    ...others.map(k=>colSnap(k,()=>CONFIG.topN))]);
+}
+const jMode=seg('#jMode',renderJudge);
+function renderJudge(){
+  const f=$('#jBase').value, t=$('#jTarget').value;
+  if(f===t){ $('#jSummary').innerHTML='<span class="delta down">基準時点と比較先が同じです</span>'; $('#jTable').innerHTML=''; return; }
+  buildJudgeTable();
+  const thr=(+$('#jThr').value||0)*MAN, tol=jTol(), mode=jMode(), scope=$('#jScope').checked, q=$('#jSearch').value.trim();
+  const base=DATA.accounts.filter(a=>a[f]&&a[f].p<=thr&&(!scope||inKvk(a)));
+  const cnt={}; base.forEach(a=>{const s=judge(a,f,t,tol); cnt[s]=(cnt[s]||0)+1;});
+  let rows=base.filter(a=>matchSearch(a,q)&&(mode==='all'||judge(a,f,t,tol)===mode));
+  rows.sort((a,b)=>b[f].p-a[f].p);
+  $('#jSummary').innerHTML=`<span>${LABEL[f]} ${fmt(thr/MAN)}万以下 <b>${base.length}</b> 件</span><span>${pill('down')} <b>${cnt.down||0}</b></span><span>${pill('up')} <b>${cnt.up||0}</b></span><span>${pill('flat')} <b>${cnt.flat||0}</b></span><span>${pill('absent')} <b>${cnt.absent||0}</b></span><span>表示 <b>${rows.length}</b> 件</span>`;
+  jT.render(rows);
+}
+['#jBase','#jThr','#jTarget','#jTol','#jScope','#jSearch'].forEach(s=>$(s).addEventListener('input',renderJudge));
+$('#jCsv').addEventListener('click',()=>{ const f=$('#jBase').value,t=$('#jTarget').value,tol=jTol();
+  downloadCSV(`judge_${f}_to_${t}_under${$('#jThr').value}man.csv`,['名前','ID',`${LABEL[f]}順位`,`${LABEL[f]}戦力`,`${LABEL[t]}順位`,`${LABEL[t]}戦力`,'差分','判定'],
+    jT.rows().map(a=>[a.name,a.id,a[f].rank,a[f].p,a[t]?a[t].rank:'不在',a[t]?a[t].p:'',a[t]?a[t].p-a[f].p:'',PILL[judge(a,f,t,tol)]])); });
+
+// ---------- 日別推移 ----------
+const dTol=()=>Math.max(0,+$('#dTol').value||0)*MAN;
+let dT=null;
+function judgeDaily(a, from, to, tol){
+  const h=a.h||{}; if(h[from]==null) return 'na'; if(h[to]==null) return 'absent';
+  const d=h[to]-h[from]; return Math.abs(d)<=tol?'flat':(d<0?'down':'up');
+}
+function buildDailyTable(dates, from){
+  const last=dates[dates.length-1];
+  const cols=[colName,colId];
+  dates.forEach((dt,i)=>{ const prev=dates[i-1];
+    cols.push({key:'h'+dt,label:`${dt.slice(4,6)}/${dt.slice(6,8)}`,cls:'grp num',cell:a=>{ const h=a.h||{}; if(h[dt]==null) return '<td class="grp num absent-cell">不在</td>';
+      let cls='flat'; if(prev&&h[prev]!=null){ const d=h[dt]-h[prev]; cls=Math.abs(d)<=dTol()?'flat':(d<0?'down':'up'); }
+      return `<td class="grp num delta ${cls}" title="${prev&&h[prev]!=null?'前日比 '+fmtD(h[dt]-h[prev]):''}">${fmt(h[dt])}</td>`; },sort:a=>(a.h||{})[dt]??null}); });
+  cols.push({key:'dsum',label:`累計 (${from.slice(4,6)}/${from.slice(6,8)}→${last.slice(4,6)}/${last.slice(6,8)})`,cls:'grp num',cell:a=>{ const h=a.h||{}; if(h[from]==null||h[last]==null) return '<td class="grp num delta flat">—</td>'; const d=h[last]-h[from]; return `<td class="grp num delta ${Math.abs(d)<=dTol()?'flat':(d<0?'down':'up')}">${fmtD(d)}</td>`; },sort:a=>{const h=a.h||{};return (h[from]!=null&&h[last]!=null)?h[last]-h[from]:null;}});
+  cols.push({key:'dj',label:'判定',cell:a=>`<td>${pill(judgeDaily(a,from,last,dTol()))}</td>`,sort:a=>({down:0,up:1,flat:2,absent:3,na:4})[judgeDaily(a,from,last,dTol())]});
+  cols.push(colSnap('k19',()=>CONFIG.topN),colSnap('k20',()=>CONFIG.topN));
+  dT=makeTable('#dTable',cols);
+}
+const dMode=seg('#dMode',renderDaily);
+function renderDaily(){
+  const dates=DATA.dates||[];
+  if(dates.length<1){ $('#dSummary').innerHTML='<span>日付シート（YYYYMMDD）が見つかりません。スプシに「20260913」のような名前のシートを追加するか、build_data.py に --daily で日別xlsxを渡してください。</span>'; $('#dTable').innerHTML=''; return; }
+  const sel=$('#dBase'); if(sel.options.length!==dates.length){ sel.innerHTML=dates.map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join(''); }
+  const from=sel.value||dates[0], last=dates[dates.length-1], tol=dTol(), mode=dMode(), scope=$('#dScope').checked, q=$('#dSearch').value.trim(), thr=(+$('#dThr').value||0)*MAN;
+  const span=dates.slice(dates.indexOf(from));
+  buildDailyTable(span, from);
+  const base=DATA.accounts.filter(a=>a.h&&a.h[from]!=null&&(!thr||a.h[from]<=thr)&&(!scope||inKvk(a)));
+  const anyDayDown=a=>span.some((dt,i)=>i>0&&a.h[dt]!=null&&a.h[span[i-1]]!=null&&a.h[span[i-1]]-a.h[dt]>tol);
+  const cnt={}; base.forEach(a=>{const s=judgeDaily(a,from,last,tol); cnt[s]=(cnt[s]||0)+1;}); cnt.anyday=base.filter(anyDayDown).length;
+  let rows=base.filter(a=>matchSearch(a,q)&&(mode==='all'||(mode==='anyday'?anyDayDown(a):judgeDaily(a,from,last,tol)===mode)));
+  rows.sort((a,b)=>{ const da=(a.h[last]??a.h[from])-a.h[from], db=(b.h[last]??b.h[from])-b.h[from]; return da-db; });
+  $('#dSummary').innerHTML=`<span>${fmtDate(from)} 時点 <b>${base.length}</b> 件</span><span>${pill('down')} <b>${cnt.down||0}</b></span><span>どこかの日で下げ <b>${cnt.anyday}</b></span><span>${pill('up')} <b>${cnt.up||0}</b></span><span>${pill('flat')} <b>${cnt.flat||0}</b></span><span>${pill('absent')} <b>${cnt.absent||0}</b></span><span>表示 <b>${rows.length}</b> 件（累計変化の小さい順）</span>`;
+  dT.render(rows);
+}
+['#dBase','#dThr','#dTol','#dScope','#dSearch'].forEach(s=>$(s).addEventListener('input',renderDaily));
+$('#dCsv').addEventListener('click',()=>{ const dates=DATA.dates||[]; if(!dates.length) return; const from=$('#dBase').value, span=dates.slice(dates.indexOf(from)), last=span[span.length-1];
+  downloadCSV(`daily_${from}_${last}.csv`,['名前','ID',...span.map(fmtDate),'累計','判定'],dT.rows().map(a=>[a.name,a.id,...span.map(d=>a.h[d]??'不在'),(a.h[from]!=null&&a.h[last]!=null)?a.h[last]-a.h[from]:'',PILL[judgeDaily(a,from,last,dTol())]])); });
+
+// ---------- タブ ----------
+$('#tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('main > section').forEach(s=>s.hidden=s.id!=='tab-'+b.dataset.tab);
+  try{ localStorage.setItem('kvk-tab',b.dataset.tab); }catch(e){} });
+
+// ---------- 起動 ----------
+async function start(){
+  const st=$('#status');
+  try{
+    if(CONFIG.sheetId){ st.textContent='スプレッドシートを読み込み中…'; DATA=await loadFromSheet(); st.textContent='データ: Googleスプレッドシート'; }
+    else if(window.KVK_DATA){ DATA=window.KVK_DATA; st.textContent=`データ: data.js（生成 ${DATA.generated||'-'}）`; }
+    else throw new Error('data.js が見つかりません（build_data.py で生成して index.html と同じ場所に置く）');
+  }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); DATA={snapshots:[],accounts:[],dates:[]}; return; }
+  $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${DATA.accounts.filter(a=>a[s.key]).length} アカウント</span></div>`).join('');
+  $('#topN').value=CONFIG.topN; $('#lowThr').value=CONFIG.defaultThreshold; $('#jThr').value=CONFIG.defaultThreshold; $('#lowTol').value=CONFIG.defaultTolerance; $('#jTol').value=CONFIG.defaultTolerance;
+  renderOverview(); renderTop(); renderLow(); renderJudge(); renderDaily();
+  try{ const t=localStorage.getItem('kvk-tab'); const b=t&&document.querySelector(`#tabs button[data-tab="${t}"]`); if(b) b.click(); }catch(e){}
+}
+start();
+})();
+</script>
+</body>
+</html>
