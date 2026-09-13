@@ -8,35 +8,29 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{
-  --ground:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --ink:#1B2430; --muted:#5D6873; --line:#D5DBE2; --line-strong:#B8C1CB;
-  --accent:#1D5C8A; --accent-ink:#FFFFFF; --accent-soft:#E3EEF7;
-  --down:#B93A2E; --down-soft:#F9E5E2; --up:#1F7A45; --up-soft:#E2F3E8; --flat:#6B7580; --flat-soft:#EAEDF0; --absent:#A86A0C; --absent-soft:#FBEFD9;
-  --sub:#5B4B9E; --sub-soft:#ECE8F7;
-  --shadow:0 1px 2px rgba(20,30,40,.06),0 4px 14px rgba(20,30,40,.05);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --ground:#11161C; --surface:#1A2129; --surface-2:#202932; --ink:#E4E9EE; --muted:#97A3AF; --line:#2B353F; --line-strong:#3D4954;
-    --accent:#6FB1DF; --accent-ink:#0E1A26; --accent-soft:#1B3040;
-    --down:#F08A7C; --down-soft:#3A201D; --up:#7BD39A; --up-soft:#193324; --flat:#A2ACB6; --flat-soft:#2A323B; --absent:#F0B45A; --absent-soft:#3A2D14;
-    --sub:#B7A6EE; --sub-soft:#2B2540;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
-  }
-}
-:root[data-theme="dark"]{
   --ground:#11161C; --surface:#1A2129; --surface-2:#202932; --ink:#E4E9EE; --muted:#97A3AF; --line:#2B353F; --line-strong:#3D4954;
   --accent:#6FB1DF; --accent-ink:#0E1A26; --accent-soft:#1B3040;
   --down:#F08A7C; --down-soft:#3A201D; --up:#7BD39A; --up-soft:#193324; --flat:#A2ACB6; --flat-soft:#2A323B; --absent:#F0B45A; --absent-soft:#3A2D14;
   --sub:#B7A6EE; --sub-soft:#2B2540;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
 }
+:root[data-theme="light"]{
+  --ground:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --ink:#1B2430; --muted:#5D6873; --line:#D5DBE2; --line-strong:#B8C1CB;
+  --accent:#1D5C8A; --accent-ink:#FFFFFF; --accent-soft:#E3EEF7;
+  --down:#B93A2E; --down-soft:#F9E5E2; --up:#1F7A45; --up-soft:#E2F3E8; --flat:#6B7580; --flat-soft:#EAEDF0; --absent:#A86A0C; --absent-soft:#FBEFD9;
+  --sub:#5B4B9E; --sub-soft:#ECE8F7;
+  --shadow:0 1px 2px rgba(20,30,40,.06),0 4px 14px rgba(20,30,40,.05);
+}
 *{box-sizing:border-box}
-html{color-scheme:light dark}
+html{color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;font-size:14px;line-height:1.5;padding-inline:16px;padding-block:0 48px}
 header{max-width:1500px;margin:0 auto;padding-block:20px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
 h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.01em;text-wrap:balance}
 h1 small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:2px}
-.periods{display:flex;flex-wrap:wrap;gap:8px}
+.periods{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.theme{appearance:none;font:inherit;font-size:12px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;align-self:center}
+.theme:hover{border-color:var(--accent);color:var(--accent)}
 .period{display:flex;flex-direction:column;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);min-width:132px}
 .period b{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
 .period span{font-size:12px;color:var(--muted)}
@@ -99,6 +93,9 @@ tfoot td{position:sticky;bottom:0;background:var(--surface-2);border-top:2px sol
 </head>
 <body>
 <script>
+(function(){ let t='dark'; try{ t=localStorage.getItem('kvk-theme')||'dark'; }catch(e){} document.documentElement.setAttribute('data-theme',t); })();
+</script>
+<script>
 // ===== 設定 =====================================================
 // Googleスプレッドシートから直接読む場合はIDを入れる（共有設定を「リンクを知っている全員が閲覧可」にすること）。
 // 空文字なら同じフォルダの data.js（build_data.py --book スプシ.xlsx で生成）を使う。
@@ -116,7 +113,7 @@ const CONFIG = {
 
 <header>
   <h1>2062 戦力ウォッチ <small>KVK19 / KVK20 / 現在 の戦力・撃破を1つのリストで比較</small></h1>
-  <div class="periods" id="periods"></div>
+  <div class="periods"><span id="periods" class="periods"></span><button class="theme" id="themeBtn" type="button" title="ダーク／ライト切替">☀ ライト</button></div>
 </header>
 <main>
   <div class="panel">
@@ -152,6 +149,12 @@ const $=s=>document.querySelector(s);
 const MAN=10000;
 const fmt=n=>n==null?'':n.toLocaleString('ja-JP');
 const fmtD=n=>(n>0?'+':'')+fmt(n);
+// 短縮表記: 1.23億 / 8,000万 / 1万未満はそのまま
+function fmtS(n){ if(n==null) return ''; const a=Math.abs(n), sg=n<0?'-':'';
+  if(a>=1e8) return sg+(a/1e8).toLocaleString('ja-JP',{minimumFractionDigits:2,maximumFractionDigits:2})+'億';
+  if(a>=1e4) return sg+Math.round(a/1e4).toLocaleString('ja-JP')+'万';
+  return sg+a.toLocaleString('ja-JP'); }
+const fmtSD=n=>(n>0?'+':'')+fmtS(n);
 const fmtDate=d=>`${d.slice(0,4)}/${d.slice(4,6)}/${d.slice(6,8)}`;
 const normId=v=>{ v=String(v??'').trim(); return v.endsWith('.0')?v.slice(0,-2):v; };
 let DATA=null;
@@ -223,22 +226,20 @@ function downloadCSV(name,header,rows){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+[header,...rows].map(r=>r.map(esc).join(',')).join('\r\n')],{type:'text/csv'})); a.download=name; a.click(); URL.revokeObjectURL(a.href);
 }
 const tol=()=>Math.max(0,+$('#fTol').value||0)*MAN;
-const deltaCell=(v,cls)=>v==null?'<td class="num delta flat">—</td>':`<td class="num delta ${cls||(Math.abs(v)<=tol()?'flat':(v<0?'down':'up'))}">${fmtD(v)}</td>`;
+const deltaCell=(v,cls,title)=>v==null?'<td class="num delta flat">—</td>':`<td class="num delta ${cls||(Math.abs(v)<=tol()?'flat':(v<0?'down':'up'))}" title="${title||fmtD(v)}">${fmtSD(v)}</td>`;
 const numCell=(v,extra)=>v==null?'<td class="num absent-cell">不在</td>':`<td class="num ${extra||''}">${fmt(v)}</td>`;
 
 // ---------- 列定義 ----------
 // group: ヘッダ上段のグループ名。sum: フッター合計の取り方
 function kvkCols(k){
   const L=k==='k19'?'KVK19':'KVK20';
+  const tt=a=>a[k]?`${L}戦力 ${fmt(a[k].p)} / 最高 ${fmt(a[k].max)}`:'';
   return [
-    {key:k+'_p',group:L,label:'戦力',cls:'gl',cell:a=>a[k]?numCell(a[k].p):'<td class="gl num absent-cell">不在</td>',sort:a=>a[k]?.p??null,sum:a=>a[k]?.p,csv:a=>a[k]?a[k].p:'不在'},
-    {key:k+'_max',group:L,label:'最高戦力',cell:a=>numCell(a[k]?.max),sort:a=>a[k]?.max??null,sum:a=>a[k]?.max,csv:a=>a[k]?.max??''},
-    {key:k+'_dp',group:L,label:'現在−戦力',cell:a=>deltaCell(a[k]&&a.now?a.now.p-a[k].p:null),sort:a=>a[k]&&a.now?a.now.p-a[k].p:null,sum:a=>a[k]&&a.now?a.now.p-a[k].p:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].p:''},
-    {key:k+'_dm',group:L,label:'現在−最高',cell:a=>deltaCell(a[k]&&a.now?a.now.p-a[k].max:null),sort:a=>a[k]&&a.now?a.now.p-a[k].max:null,sum:a=>a[k]&&a.now?a.now.p-a[k].max:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].max:''},
+    {key:k+'_dp',group:L,label:'現在−戦力',cls:'gl',cell:a=>a[k]&&a.now?deltaCell(a.now.p-a[k].p,null,`現在 ${fmt(a.now.p)} − ${tt(a)}`).replace('<td class="','<td class="gl '):(a[k]?'<td class="gl num delta flat">—</td>':'<td class="gl num absent-cell">不在</td>'),sort:a=>a[k]&&a.now?a.now.p-a[k].p:null,sum:a=>a[k]&&a.now?a.now.p-a[k].p:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].p:(a[k]?'':'不在')},
+    {key:k+'_dm',group:L,label:'現在−最高',cell:a=>deltaCell(a[k]&&a.now?a.now.p-a[k].max:null,null,a[k]&&a.now?`現在 ${fmt(a.now.p)} − ${tt(a)}`:''),sort:a=>a[k]&&a.now?a.now.p-a[k].max:null,sum:a=>a[k]&&a.now?a.now.p-a[k].max:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].max:''},
     {key:k+'_j',group:L,label:'判定',cell:a=>`<td>${pill(judge(a,k,'now',tol()))}</td>`,sort:a=>({down:0,up:1,flat:2,absent:3,na:4})[judge(a,k,'now',tol())],csv:a=>PILL[judge(a,k,'now',tol())]},
-    {key:k+'_kp',group:L,label:'撃破pt',cell:a=>a[k]?`<td class="num ${a[k].kp===0?'zero':''}" title="T5撃破 ${fmt(a[k].k5)} / T4撃破 ${fmt(a[k].k4)}">${fmt(a[k].kp)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.kp??null,sum:a=>a[k]?.kp,csv:a=>a[k]?.kp??''},
-    {key:k+'_k54',group:L,label:'T5/T4撃破',cell:a=>a[k]?`<td class="num">${fmt(a[k].k5)} / ${fmt(a[k].k4)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?a[k].k5+a[k].k4:null,csv:a=>a[k]?`${a[k].k5}/${a[k].k4}`:''},
-    {key:k+'_dead',group:L,label:'戦死(T4+T5)',cell:a=>numCell(a[k]?.dead),sort:a=>a[k]?.dead??null,sum:a=>a[k]?.dead,csv:a=>a[k]?.dead??''},
+    {key:k+'_kp',group:L,label:'撃破pt',cell:a=>a[k]?`<td class="num ${a[k].kp===0?'zero':''}" title="撃破pt ${fmt(a[k].kp)}（T5 ${fmt(a[k].k5)} / T4 ${fmt(a[k].k4)}）">${fmtS(a[k].kp)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.kp??null,sum:a=>a[k]?.kp,csv:a=>a[k]?.kp??''},
+    {key:k+'_dead',group:L,label:'戦死',cell:a=>a[k]?`<td class="num" title="戦死(T4+T5) ${fmt(a[k].dead)}">${fmtS(a[k].dead)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.dead??null,sum:a=>a[k]?.dead,csv:a=>a[k]?.dead??''},
   ];
 }
 function buildColumns(){
@@ -248,7 +249,6 @@ function buildColumns(){
     {key:'type',group:'',label:'区分',cell:a=>`<td><span class="pill ${a.type}">${a.type==='sub'?'サブ':'メイン'}</span></td>`,sort:a=>a.type,csv:a=>a.type==='sub'?'サブ':'メイン'},
     {key:'main',group:'',label:'メイン',cell:a=>`<td class="sub-of" title="${a.mainName||''} ${a.mainId||''}">${a.type==='sub'?(a.mainName||a.mainId||''):''}</td>`,sort:a=>a.mainName||'',csv:a=>a.type==='sub'?`${a.mainName||''} (${a.mainId||''})`:''},
     {key:'now_p',group:'現在',label:'戦力',cls:'gl',cell:a=>a.now?`<td class="gl num"><b>${fmt(a.now.p)}</b></td>`:'<td class="gl num absent-cell">不在</td>',sort:a=>a.now?.p??null,sum:a=>a.now?.p,csv:a=>a.now?a.now.p:'不在'},
-    {key:'now_max',group:'現在',label:'最高戦力',cell:a=>numCell(a.now?.max),sort:a=>a.now?.max??null,csv:a=>a.now?.max??''},
     ...kvkCols('k19'),...kvkCols('k20'),
   ];
   const dates=DATA.dates||[];
@@ -281,7 +281,7 @@ function renderTable(){
   // 合計
   const foot='<tfoot><tr>'+COLS.map((c,i)=>{ if(i===0) return `<td>合計 ${fmt(rows.length)} 件</td>`; if(!c.sum) return `<td class="${c.cls||''}"></td>`;
     let s=0,n=0; rows.forEach(a=>{const v=c.sum(a); if(v!=null){s+=v;n++;}}); const isD=/_dp$|_dm$|hsum/.test(c.key);
-    return `<td class="num ${c.cls||''} ${isD?'delta '+(s<0?'down':s>0?'up':'flat'):''}" title="${n}件の合計">${isD?fmtD(s):fmt(s)}</td>`; }).join('')+'</tr></tfoot>';
+    const short=c.key!=='now_p'; return `<td class="num ${c.cls||''} ${isD?'delta '+(s<0?'down':s>0?'up':'flat'):''}" title="${n}件の合計: ${isD?fmtD(s):fmt(s)}">${isD?(short?fmtSD(s):fmtD(s)):(short?fmtS(s):fmt(s))}</td>`; }).join('')+'</tr></tfoot>';
   table.innerHTML='<thead>'+grpRow+colRow+'</thead>'+body+foot;
 }
 
@@ -304,8 +304,8 @@ function apply(){
   const subs=rows.filter(a=>a.type==='sub').length;
   $('#summary').innerHTML=`<span>表示 <b>${rows.length}</b> 件（メイン <b>${rows.length-subs}</b> / サブ <b>${subs}</b>）</span>`+
     `<span>現在戦力 合計 <b>${fmt(sum(a=>a.now?.p))}</b></span>`+
-    `<span>KVK19→現在: ${pill('down')} <b>${cnt('k19','down')}</b> ${pill('up')} <b>${cnt('k19','up')}</b> ${pill('flat')} <b>${cnt('k19','flat')}</b> ${pill('absent')} <b>${cnt('k19','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0)<0?'down':'up'}">${fmtD(sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0))}</b></span>`+
-    `<span>KVK20→現在: ${pill('down')} <b>${cnt('k20','down')}</b> ${pill('up')} <b>${cnt('k20','up')}</b> ${pill('flat')} <b>${cnt('k20','flat')}</b> ${pill('absent')} <b>${cnt('k20','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0)<0?'down':'up'}">${fmtD(sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0))}</b></span>`+
+    `<span>KVK19→現在: ${pill('down')} <b>${cnt('k19','down')}</b> ${pill('up')} <b>${cnt('k19','up')}</b> ${pill('flat')} <b>${cnt('k19','flat')}</b> ${pill('absent')} <b>${cnt('k19','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0))}</b></span>`+
+    `<span>KVK20→現在: ${pill('down')} <b>${cnt('k20','down')}</b> ${pill('up')} <b>${cnt('k20','up')}</b> ${pill('flat')} <b>${cnt('k20','flat')}</b> ${pill('absent')} <b>${cnt('k20','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0))}</b></span>`+
     `<span>撃破0: KVK19 <b>${rows.filter(a=>a.k19&&a.k19.kp===0).length}</b> / KVK20 <b>${rows.filter(a=>a.k20&&a.k20.kp===0).length}</b></span>`+
     `<span>現在不在 <b>${rows.filter(a=>!a.now).length}</b></span>`;
   renderTable();
@@ -315,6 +315,11 @@ $('#btnReset').addEventListener('click',()=>{ Object.values(S).forEach(s=>s.rese
 $('#btnCsv').addEventListener('click',()=>{ const col=COLS.find(c=>c.key===sortKey); const rows=[...lastRows].sort((a,b)=>{const x=col.sort(a),y=col.sort(b); if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return (typeof x==='string'?x.localeCompare(y,'ja'):x-y)*sortDir;});
   downloadCSV('kvk_list.csv',COLS.map(c=>(c.group?c.group+' ':'')+c.label),rows.map(a=>COLS.map(c=>c.csv(a)))); });
 
+// ---------- テーマ ----------
+function applyThemeBtn(){ const t=document.documentElement.getAttribute('data-theme')||'dark'; $('#themeBtn').textContent=t==='dark'?'☀ ライト':'☾ ダーク'; }
+$('#themeBtn').addEventListener('click',()=>{ const t=(document.documentElement.getAttribute('data-theme')||'dark')==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',t); try{ localStorage.setItem('kvk-theme',t); }catch(e){} applyThemeBtn(); });
+applyThemeBtn();
+
 // ---------- 起動 ----------
 async function start(){
   const st=$('#status');
@@ -323,7 +328,7 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　順位列は無し。列見出しクリックでソート、既定は現在戦力の降順。「変化なし」は差分が ±許容幅以内。撃破ptが 0 のセルは赤字。`;
+  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の列は現在との差分（1.23億 / 8,000万 表記、マウスで実数）。「変化なし」は差分が ±許容幅以内。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
