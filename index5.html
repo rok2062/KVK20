@@ -84,6 +84,14 @@ tfoot td{position:sticky;bottom:0;background:var(--surface-2);border-top:2px sol
 .delta.down{color:var(--down)}.delta.up{color:var(--up)}.delta.flat{color:var(--muted)}
 .absent-cell{color:var(--absent);font-weight:500}
 .zero{color:var(--down);font-weight:500}
+.lowd{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums}
+.kingdom{margin-bottom:12px}
+.kingdom .khead{padding:8px 16px;font-weight:700;border-bottom:1px solid var(--line);font-size:13px}
+.kingdom table{width:auto;min-width:0}
+.kingdom th,.kingdom td{padding:5px 14px}
+.kingdom thead th{position:static;cursor:default}
+.kingdom tbody th{text-align:left;font-weight:500;color:var(--muted);white-space:nowrap;border-bottom:1px solid var(--line);padding:5px 14px;font-size:12px}
+.kingdom tbody tr:last-child td,.kingdom tbody tr:last-child th{border-bottom:0}
 .empty{padding:28px 16px;color:var(--muted);text-align:center}
 #status{max-width:1500px;margin:8px auto 0;font-size:12px;color:var(--muted)}
 #status.err{color:var(--down)}
@@ -106,7 +114,7 @@ const CONFIG = {
   // 日別シート: 「20260913」のように YYYYMMDD 名のシートを毎日追加すると、最新の日付シートを「現在」として扱う。
   dailyStart: '2026-09-12',   // この日から今日までの YYYYMMDD シートを探す
   dailyEnd: '',               // 空なら今日まで
-  defaultTolerance: 100,      // 万 (「変化なし」判定の許容幅)
+  defaultTolerance: 10,       // 万 (「変化なし」判定の許容幅)
 };
 </script>
 <script src="data.js"></script>
@@ -116,6 +124,10 @@ const CONFIG = {
   <div class="periods"><span id="periods" class="periods"></span><button class="theme" id="themeBtn" type="button" title="ダーク／ライト切替">☀ ライト</button></div>
 </header>
 <main>
+  <div class="panel kingdom">
+    <div class="khead">王国全体（フィルター無関係・各時点の全アカウント）</div>
+    <div class="tablewrap" style="max-height:none"><table id="kingdom"></table></div>
+  </div>
   <div class="panel">
     <div class="controls">
       <div class="field"><label>区分</label><div class="seg" id="fType"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="main">メインのみ</button><button aria-pressed="false" data-v="sub">サブのみ</button></div></div>
@@ -130,7 +142,7 @@ const CONFIG = {
       <div class="field"><label>KVK20 撃破</label><div class="seg" id="fKill20"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="zero">撃破0</button><button aria-pressed="false" data-v="nonzero">撃破あり</button></div></div>
       <div class="field"><label>KVK19→現在</label><div class="seg" id="fCh19"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="down">下げ</button><button aria-pressed="false" data-v="up">上げ</button><button aria-pressed="false" data-v="flat">変化なし</button><button aria-pressed="false" data-v="absent">不在</button></div></div>
       <div class="field"><label>KVK20→現在</label><div class="seg" id="fCh20"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="down">下げ</button><button aria-pressed="false" data-v="up">上げ</button><button aria-pressed="false" data-v="flat">変化なし</button><button aria-pressed="false" data-v="absent">不在</button></div></div>
-      <div class="field"><label>変化なし ±（万）</label><input type="number" id="fTol" value="100" min="0" step="10"></div>
+      <div class="field"><label>変化なし ±（万）</label><input type="number" id="fTol" value="10" min="0" step="10"></div>
       <div class="field"><label>最低戦力の時点</label><div class="seg" id="fLow"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="now">現在</button><button aria-pressed="false" data-v="k20">KVK20</button><button aria-pressed="false" data-v="k19">KVK19</button></div></div>
       <label class="check"><input type="checkbox" id="fScope" checked>KVK19かKVK20に存在するアカウントのみ</label>
       <label class="check"><input type="checkbox" id="fShowNowAbsent" checked>現在不在も表示</label>
@@ -239,7 +251,6 @@ function kvkCols(k){
   const tt=a=>a[k]?`現在 ${fmt(a.now?a.now.p:'')} − ${L}戦力 ${fmt(a[k].p)}（${L}最高 ${fmt(a[k].max)}）`:'';
   return [
     {key:k+'_dm',group:L,label:L+'→現在',cls:'gl',cell:a=>a[k]&&a.now?deltaCell(a.now.p-a[k].p,null,tt(a)).replace('<td class="','<td class="gl '):(a[k]?'<td class="gl num delta flat" title="現在不在">—</td>':'<td class="gl num absent-cell">不在</td>'),sort:a=>a[k]&&a.now?a.now.p-a[k].p:null,sum:a=>a[k]&&a.now?a.now.p-a[k].p:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].p:(a[k]?'':'不在')},
-    {key:k+'_j',group:L,label:'判定',cell:a=>`<td>${pill(judge(a,k,'now',tol()))}</td>`,sort:a=>({down:0,up:1,flat:2,absent:3,na:4})[judge(a,k,'now',tol())],csv:a=>PILL[judge(a,k,'now',tol())]},
     {key:k+'_kp',group:L,label:'撃破pt',cell:a=>a[k]?`<td class="num ${a[k].kp===0?'zero':''}" title="撃破pt ${fmt(a[k].kp)}（T5 ${fmt(a[k].k5)} / T4 ${fmt(a[k].k4)}）">${fmtS(a[k].kp)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.kp??null,sum:a=>a[k]?.kp,csv:a=>a[k]?.kp??''},
     {key:k+'_dead',group:L,label:'戦死',cell:a=>a[k]?`<td class="num" title="戦死(T4+T5) ${fmt(a[k].dead)}">${fmtS(a[k].dead)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.dead??null,sum:a=>a[k]?.dead,csv:a=>a[k]?.dead??''},
   ];
@@ -254,7 +265,8 @@ function buildColumns(){
     {key:'id',group:'',label:'ID',cell:a=>`<td class="id">${a.id}</td>`,sort:a=>+a.id,csv:a=>a.id},
     {key:'type',group:'',label:'区分',cell:a=>`<td><span class="pill ${a.type}">${a.type==='sub'?'サブ':'メイン'}</span></td>`,sort:a=>a.type,csv:a=>a.type==='sub'?'サブ':'メイン'},
     {key:'main',group:'',label:'メイン',cell:a=>`<td class="sub-of" title="${a.mainName||''} ${a.mainId||''}">${a.type==='sub'?(a.mainName||a.mainId||''):''}</td>`,sort:a=>a.mainName||'',csv:a=>a.type==='sub'?`${a.mainName||''} (${a.mainId||''})`:''},
-    {key:'low',group:'現在',label:'最低',cls:'gl',cell:a=>{const k=lowest(a); return k?`<td class="gl"><span class="pill ${k==='now'?'down':'flat'}" title="最低: ${LOWL[k]} ${fmt(a[k].p)}">${LOWL[k]}</span></td>`:'<td class="gl"></td>';},sort:a=>({now:0,k20:1,k19:2})[lowest(a)]??9,csv:a=>LOWL[lowest(a)]||''},
+    {key:'low',group:'現在',label:'最低',cls:'gl',cell:a=>{const k=lowest(a); if(!k) return '<td class="gl"></td>'; const d=(k!=='now'&&a.now)?a.now.p-a[k].p:null;
+      return `<td class="gl"><span class="pill ${k==='now'?'down':'flat'}" title="最低: ${LOWL[k]} ${fmt(a[k].p)}">${LOWL[k]}</span>${d!=null?` <span class="delta up lowd" title="現在 − 最低 = ${fmtD(d)}">${fmtSD(d)}</span>`:''}</td>`;},sort:a=>({now:0,k20:1,k19:2})[lowest(a)]??9,csv:a=>LOWL[lowest(a)]||''},
     {key:'now_p',group:'現在',label:'戦力',cell:a=>a.now?`<td class="num"><b>${fmt(a.now.p)}</b></td>`:'<td class="num absent-cell">不在</td>',sort:a=>a.now?.p??null,sum:a=>a.now?.p,csv:a=>a.now?a.now.p:'不在'},
     ...kvkCols('k19'),...kvkCols('k20'),
   ];
@@ -323,6 +335,18 @@ $('#btnReset').addEventListener('click',()=>{ Object.values(S).forEach(s=>s.rese
 $('#btnCsv').addEventListener('click',()=>{ const col=COLS.find(c=>c.key===sortKey); const rows=[...lastRows].sort((a,b)=>{const x=col.sort(a),y=col.sort(b); if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return (typeof x==='string'?x.localeCompare(y,'ja'):x-y)*sortDir;});
   downloadCSV('kvk_list.csv',COLS.map(c=>(c.group?c.group+' ':'')+c.label),rows.map(a=>COLS.map(c=>c.csv(a)))); });
 
+// ---------- 王国全体 ----------
+function renderKingdom(){
+  const N=300, snaps=['k19','k20','now'], L={k19:'KVK19',k20:'KVK20',now:'現在'};
+  const pw=k=>DATA.accounts.filter(a=>a[k]).map(a=>a[k].p).sort((x,y)=>y-x);
+  const P={}; snaps.forEach(k=>P[k]=pw(k));
+  const total=k=>P[k].reduce((s,v)=>s+v,0), top=k=>P[k].slice(0,N).reduce((s,v)=>s+v,0), cnt=k=>P[k].length, nth=k=>P[k][N-1]??null;
+  const dcell=(v,short=true)=>`<td class="num delta ${v<0?'down':v>0?'up':'flat'}" title="${fmtD(v)}">${short?fmtSD(v):fmtD(v)}</td>`;
+  const row=(label,f,short=true)=>`<tr><th>${label}</th>${snaps.map(k=>`<td class="num" title="${fmt(f(k))}">${short?fmtS(f(k)):fmt(f(k))}</td>`).join('')}${dcell(f('now')-f('k19'),short)}${dcell(f('now')-f('k20'),short)}</tr>`;
+  $('#kingdom').innerHTML=`<thead><tr class="col"><th></th>${snaps.map(k=>`<th class="num">${L[k]}</th>`).join('')}<th class="num gl">現在−KVK19</th><th class="num">現在−KVK20</th></tr></thead><tbody>`+
+    row('総戦力',total)+row(`TOP${N} 戦力`,top)+row(`${N}位の戦力`,nth)+row('アカウント数',cnt,false)+'</tbody>';
+}
+
 // ---------- テーマ ----------
 function applyThemeBtn(){ const t=document.documentElement.getAttribute('data-theme')||'dark'; $('#themeBtn').textContent=t==='dark'?'☀ ライト':'☾ ダーク'; }
 $('#themeBtn').addEventListener('click',()=>{ const t=(document.documentElement.getAttribute('data-theme')||'dark')==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',t); try{ localStorage.setItem('kvk-theme',t); }catch(e){} applyThemeBtn(); });
@@ -336,11 +360,11 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点。撃破pt 0 は赤字。`;
+  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
-  apply();
+  renderKingdom(); apply();
 }
 start();
 })();
