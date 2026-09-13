@@ -216,8 +216,8 @@ async function loadFromSheet(){
 
 // ---------- 共通 ----------
 const inKvk=a=>!!(a.k19||a.k20);
-// 判定: 現在戦力 − そのKVK時点の過去最大戦力（表の「KVK19→現在」列と同じ）
-const base=(a,k)=>k==='now'?a[k].p:a[k].max;
+// 判定: 現在戦力 − そのKVK時点の戦力（表の「KVK19→現在」列と同じ）
+const base=(a,k)=>a[k].p;
 function judge(a,from,to,tol){ if(!a[from]) return 'na'; if(!a[to]) return 'absent'; const d=a[to].p-base(a,from); return Math.abs(d)<=tol?'flat':(d<0?'down':'up'); }
 const PILL={down:'下げ',up:'上げ',flat:'変化なし',absent:'不在',na:'—'};
 const pill=s=>`<span class="pill ${s}">${PILL[s]}</span>`;
@@ -236,9 +236,9 @@ const numCell=(v,extra)=>v==null?'<td class="num absent-cell">不在</td>':`<td 
 // group: ヘッダ上段のグループ名。sum: フッター合計の取り方
 function kvkCols(k){
   const L=k==='k19'?'KVK19':'KVK20';
-  const tt=a=>a[k]?`現在 ${fmt(a.now?a.now.p:'')} − ${L}最高 ${fmt(a[k].max)}（${L}戦力 ${fmt(a[k].p)}）`:'';
+  const tt=a=>a[k]?`現在 ${fmt(a.now?a.now.p:'')} − ${L}戦力 ${fmt(a[k].p)}（${L}最高 ${fmt(a[k].max)}）`:'';
   return [
-    {key:k+'_dm',group:L,label:L+'→現在',cls:'gl',cell:a=>a[k]&&a.now?deltaCell(a.now.p-a[k].max,null,tt(a)).replace('<td class="','<td class="gl '):(a[k]?'<td class="gl num delta flat" title="現在不在">—</td>':'<td class="gl num absent-cell">不在</td>'),sort:a=>a[k]&&a.now?a.now.p-a[k].max:null,sum:a=>a[k]&&a.now?a.now.p-a[k].max:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].max:(a[k]?'':'不在')},
+    {key:k+'_dm',group:L,label:L+'→現在',cls:'gl',cell:a=>a[k]&&a.now?deltaCell(a.now.p-a[k].p,null,tt(a)).replace('<td class="','<td class="gl '):(a[k]?'<td class="gl num delta flat" title="現在不在">—</td>':'<td class="gl num absent-cell">不在</td>'),sort:a=>a[k]&&a.now?a.now.p-a[k].p:null,sum:a=>a[k]&&a.now?a.now.p-a[k].p:undefined,csv:a=>a[k]&&a.now?a.now.p-a[k].p:(a[k]?'':'不在')},
     {key:k+'_j',group:L,label:'判定',cell:a=>`<td>${pill(judge(a,k,'now',tol()))}</td>`,sort:a=>({down:0,up:1,flat:2,absent:3,na:4})[judge(a,k,'now',tol())],csv:a=>PILL[judge(a,k,'now',tol())]},
     {key:k+'_kp',group:L,label:'撃破pt',cell:a=>a[k]?`<td class="num ${a[k].kp===0?'zero':''}" title="撃破pt ${fmt(a[k].kp)}（T5 ${fmt(a[k].k5)} / T4 ${fmt(a[k].k4)}）">${fmtS(a[k].kp)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.kp??null,sum:a=>a[k]?.kp,csv:a=>a[k]?.kp??''},
     {key:k+'_dead',group:L,label:'戦死',cell:a=>a[k]?`<td class="num" title="戦死(T4+T5) ${fmt(a[k].dead)}">${fmtS(a[k].dead)}</td>`:'<td class="num absent-cell">—</td>',sort:a=>a[k]?.dead??null,sum:a=>a[k]?.dead,csv:a=>a[k]?.dead??''},
@@ -312,8 +312,8 @@ function apply(){
   const subs=rows.filter(a=>a.type==='sub').length;
   $('#summary').innerHTML=`<span>表示 <b>${rows.length}</b> 件（メイン <b>${rows.length-subs}</b> / サブ <b>${subs}</b>）</span>`+
     `<span>現在戦力 合計 <b>${fmt(sum(a=>a.now?.p))}</b></span>`+
-    `<span>KVK19→現在: ${pill('down')} <b>${cnt('k19','down')}</b> ${pill('up')} <b>${cnt('k19','up')}</b> ${pill('flat')} <b>${cnt('k19','flat')}</b> ${pill('absent')} <b>${cnt('k19','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k19&&a.now?a.now.p-a.k19.max:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k19&&a.now?a.now.p-a.k19.max:0))}</b></span>`+
-    `<span>KVK20→現在: ${pill('down')} <b>${cnt('k20','down')}</b> ${pill('up')} <b>${cnt('k20','up')}</b> ${pill('flat')} <b>${cnt('k20','flat')}</b> ${pill('absent')} <b>${cnt('k20','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k20&&a.now?a.now.p-a.k20.max:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k20&&a.now?a.now.p-a.k20.max:0))}</b></span>`+
+    `<span>KVK19→現在: ${pill('down')} <b>${cnt('k19','down')}</b> ${pill('up')} <b>${cnt('k19','up')}</b> ${pill('flat')} <b>${cnt('k19','flat')}</b> ${pill('absent')} <b>${cnt('k19','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k19&&a.now?a.now.p-a.k19.p:0))}</b></span>`+
+    `<span>KVK20→現在: ${pill('down')} <b>${cnt('k20','down')}</b> ${pill('up')} <b>${cnt('k20','up')}</b> ${pill('flat')} <b>${cnt('k20','flat')}</b> ${pill('absent')} <b>${cnt('k20','absent')}</b> 合計差 <b class="delta ${sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0)<0?'down':'up'}">${fmtSD(sum(a=>a.k20&&a.now?a.now.p-a.k20.p:0))}</b></span>`+
     `<span>撃破0: KVK19 <b>${rows.filter(a=>a.k19&&a.k19.kp===0).length}</b> / KVK20 <b>${rows.filter(a=>a.k20&&a.k20.kp===0).length}</b></span>`+
     `<span>最低が現在 <b>${rows.filter(a=>lowest(a)==='now').length}</b></span><span>現在不在 <b>${rows.filter(a=>!a.now).length}</b></span>`;
   renderTable();
@@ -336,7 +336,7 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。「KVK19→現在」は 現在戦力 − KVK19時の最高戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点。撃破pt 0 は赤字。`;
+  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
