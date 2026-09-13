@@ -186,7 +186,7 @@ function parseCSV(text){
 }
 async function fetchRows(name, required){
   // _=時刻 でキャッシュ回避（ブラウザ／中継のキャッシュで古いCSVが返るのを防ぐ）
-  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
   let res; try{ res=await fetch(url,{cache:'no-store'}); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
   if(!res.ok){ if(required) throw new Error(`${name} シートを取得できません (${res.status})`); return null; }
   const rows=parseCSV(await res.text()); return rows.length?rows:null;
@@ -194,7 +194,10 @@ async function fetchRows(name, required){
 const num=v=>{const n=parseFloat(String(v??'').replace(/[,\s]/g,''));return isNaN(n)?0:Math.round(n);};
 function statsFromRows(rows, name, required){
   if(!rows) return null;
-  const h=rows[0].map(s=>s.trim()); const ix=n=>h.indexOf(n);
+  // 見出し行を先頭5行から探す（1行目に日付などが混ざると Google が見出し無しとして返すことがある）
+  let hi=rows.slice(0,5).findIndex(r=>r.some(c=>String(c).trim()==='キャラクターID')); if(hi<0) hi=0;
+  rows=rows.slice(hi);
+  const h=rows[0].map(s=>String(s).trim()); const ix=n=>h.indexOf(n);
   const I={id:ix('キャラクターID'),name:ix('キャラクターニックネーム'),p:ix('現在の戦力'),max:ix('過去最大戦力'),kp:ix('撃破ポイント合計'),k5:ix('T5撃破合計'),k4:ix('T4撃破合計'),d5:ix('T5戦死'),d4:ix('T4戦死')};
   if(I.id<0||I.p<0){ if(required) throw new Error(`${name} シートの見出しが statsExport 形式ではありません`); return null; }
   const g=(r,k)=>I[k]>=0?num(r[I[k]]):0, out={};
@@ -379,7 +382,7 @@ async function start(){
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
   if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:8px 0 0'; w.textContent=DATA.warn; st.before(w); }
-  st.textContent=`ページ版: base対応 v2　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  st.textContent=`ページ版: base対応 v3　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
