@@ -185,8 +185,9 @@ function parseCSV(text){
   return rows;
 }
 async function fetchRows(name, required){
-  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
-  let res; try{ res=await fetch(url); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
+  // _=時刻 でキャッシュ回避（ブラウザ／中継のキャッシュで古いCSVが返るのを防ぐ）
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+  let res; try{ res=await fetch(url,{cache:'no-store'}); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
   if(!res.ok){ if(required) throw new Error(`${name} シートを取得できません (${res.status})`); return null; }
   const rows=parseCSV(await res.text()); return rows.length?rows:null;
 }
@@ -373,7 +374,7 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  st.textContent=`データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  st.textContent=`取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
