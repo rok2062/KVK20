@@ -246,7 +246,8 @@ function kvkCols(k){
 }
 // 最低戦力: KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点
 const LOWL={k19:'KVK19',k20:'KVK20',now:'現在'};
-function lowest(a){ let k=null,v=null; for(const s of ['k19','k20','now']) if(a[s]&&(v==null||a[s].p<v)){k=s;v=a[s].p;} return k; }
+// 同値なら 現在 > KVK20 > KVK19 の順で優先
+function lowest(a){ let k=null,v=null; for(const s of ['now','k20','k19']) if(a[s]&&(v==null||a[s].p<v)){k=s;v=a[s].p;} return k; }
 function buildColumns(){
   const cols=[
     {key:'name',group:'',label:'名前',cell:a=>`<td class="name" title="${a.name.replace(/"/g,'&quot;')}">${a.name}</td>`,sort:a=>a.name,csv:a=>a.name},
