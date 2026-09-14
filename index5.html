@@ -363,15 +363,15 @@ $('#btnCsv').addEventListener('click',()=>{ const col=COLS.find(c=>c.key===sortK
 // ---------- 王国全体 ----------
 function renderKingdom(){
   const N=300;
-  const L={k19:'KVK19base',a19:'AfterKVK19',k20:'KVK20base',a20:'AfterKVK20',now:'現在'};
-  const SUB={k19:'マッチング時',a19:'KVK後',k20:'マッチング時',a20:'KVK後',now:DATA.snapshots[2].period};
+  const L={k19:'KVK19マッチング',a19:'KVK19後',k20:'KVK20マッチング',a20:'KVK20後',now:'現在'};
+  const SUB={k19:CONFIG.sheets.k19base,a19:CONFIG.sheets.a19,k20:CONFIG.sheets.k20base,a20:CONFIG.sheets.a20,now:DATA.snapshots[2].period};
   const snaps=['k19','a19','k20','a20','now'].filter(k=>DATA.accounts.some(a=>a[k]));
   const P={}; snaps.forEach(k=>P[k]=DATA.accounts.filter(a=>a[k]).map(a=>a[k].p).sort((x,y)=>y-x));
   const total=k=>P[k].reduce((s,v)=>s+v,0), top=k=>P[k].slice(0,N).reduce((s,v)=>s+v,0), cnt=k=>P[k].length, nth=k=>P[k][N-1]??null;
   const cmp=snaps.filter(k=>k!=='now');
   const dcell=(v,short=true)=>`<td class="num delta ${v<0?'down':v>0?'up':'flat'}" title="${fmtD(v)}">${short?fmtSD(v):fmtD(v)}</td>`;
   const row=(label,f,short=true)=>`<tr><th>${label}</th>${snaps.map(k=>`<td class="num ${k==='now'?'gl':''}" title="${fmt(f(k))}">${k==='now'?'<b>':''}${short?fmtS(f(k)):fmt(f(k))}${k==='now'?'</b>':''}</td>`).join('')}${cmp.map((k,i)=>dcell(f('now')-f(k),short).replace('<td class="','<td class="'+(i===0?'gl ':''))).join('')}</tr>`;
-  $('#kingdom').innerHTML=`<thead><tr class="col"><th></th>${snaps.map(k=>`<th class="num ${k==='now'?'gl':''}">${L[k]}<br><span style="font-weight:400">${SUB[k]}</span></th>`).join('')}${cmp.map((k,i)=>`<th class="num ${i===0?'gl':''}">現在−${L[k]}</th>`).join('')}</tr></thead><tbody>`+
+  $('#kingdom').innerHTML=`<thead><tr class="col"><th></th>${snaps.map(k=>`<th class="num ${k==='now'?'gl':''}">${L[k]}<br><span style="font-weight:400;color:var(--muted)">${SUB[k]}</span></th>`).join('')}${cmp.map((k,i)=>`<th class="num ${i===0?'gl':''}">${L[k]}→現在</th>`).join('')}</tr></thead><tbody>`+
     row('総戦力',total)+row(`TOP${N} 戦力`,top)+row(`${N}位の戦力`,nth)+row('アカウント数',cnt,false)+'</tbody>';
 }
 
