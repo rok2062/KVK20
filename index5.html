@@ -89,7 +89,7 @@ tfoot td{position:sticky;bottom:0;background:var(--surface-2);border-top:2px sol
 .kingdom .khead{padding:8px 16px;font-weight:700;border-bottom:1px solid var(--line);font-size:13px}
 .kingdom table{width:auto;min-width:0}
 .kingdom th,.kingdom td{padding:5px 14px}
-.kingdom thead th{position:static;cursor:default}
+.kingdom thead th{position:static;cursor:default;vertical-align:bottom;line-height:1.25}
 .kingdom tbody th{text-align:left;font-weight:500;color:var(--muted);white-space:nowrap;border-bottom:1px solid var(--line);padding:5px 14px;font-size:12px}
 .kingdom tbody tr:last-child td,.kingdom tbody tr:last-child th{border-bottom:0}
 .empty{padding:28px 16px;color:var(--muted);text-align:center}
@@ -109,8 +109,9 @@ tfoot td{position:sticky;bottom:0;background:var(--surface-2);border-top:2px sol
 // 空文字なら同じフォルダの data.js（build_data.py --book スプシ.xlsx で生成）を使う。
 const CONFIG = {
   sheetId: '1P432N6b3gd0Pd4pM22EAUoVHnMZJhKVLO9bsBDK-1Co',
-  sheets: { k19: 'KVK19', k20: 'KVK20', k19base: 'KVK19base', k20base: 'KVK20base', subs: 'サブ登録copy', now: '現在' },
-  // KVK19/KVK20 の戦力・最高戦力は *base シート（KVK終了直後のエクスポート）を優先し、撃破pt・戦死は KVK19/KVK20 シート（KVK期間の統計）から取る。
+  sheets: { k19: 'KVK19', k20: 'KVK20', k19base: 'KVK19base', k20base: 'KVK20base', a19: 'AfterKVK19', a20: 'AfterKVK20', subs: 'サブ登録copy', now: '現在' },
+  // KVK19/KVK20 の戦力・最高戦力は *base シート（KVKマッチング時のエクスポート）を優先し、撃破pt・戦死は KVK19/KVK20 シート（KVK期間の統計）から取る。
+  // AfterKVK19 / AfterKVK20（KVK終了後）は王国全体の比較表にのみ使う。
   // base シートが無い／IDが無い場合は KVK19/KVK20 シートの戦力を使う。
   periods: { k19: '2026/04/10〜05/30', k20: '2026/07/06〜08/22' },
   // 日別シート: 「20260913」のように YYYYMMDD 名のシートを毎日追加すると、最新の日付シートを「現在」として扱う。
@@ -223,22 +224,25 @@ function dateRange(){
 async function loadFromSheet(){
   const st=$('#status'); st.textContent='スプレッドシートを読み込み中…';
   const dates=dateRange();
-  const [r19,r20,b19,b20,rSubs,...rDaily]=await Promise.all([fetchRows(CONFIG.sheets.k19,true),fetchRows(CONFIG.sheets.k20,true),fetchRows(CONFIG.sheets.k19base,false),fetchRows(CONFIG.sheets.k20base,false),fetchRows(CONFIG.sheets.subs,false),...dates.map(d=>fetchRows(d,false))]);
+  const [r19,r20,b19,b20,ra19,ra20,rSubs,...rDaily]=await Promise.all([fetchRows(CONFIG.sheets.k19,true),fetchRows(CONFIG.sheets.k20,true),fetchRows(CONFIG.sheets.k19base,false),fetchRows(CONFIG.sheets.k20base,false),fetchRows(CONFIG.sheets.a19,false),fetchRows(CONFIG.sheets.a20,false),fetchRows(CONFIG.sheets.subs,false),...dates.map(d=>fetchRows(d,false))]);
+  const a19=statsFromRows(ra19,CONFIG.sheets.a19,false)||{}, a20=statsFromRows(ra20,CONFIG.sheets.a20,false)||{};
   const s19=statsFromRows(r19,CONFIG.sheets.k19,true), s20=statsFromRows(r20,CONFIG.sheets.k20,true);
   const sb19=statsFromRows(b19,CONFIG.sheets.k19base,false), sb20=statsFromRows(b20,CONFIG.sheets.k20base,false);
   const k19=mergeBase(s19,sb19), k20=mergeBase(s20,sb20);
   const cnt=o=>o?Object.keys(o).length+'件':'見つからず';
-  const loaded=`${CONFIG.sheets.k19} ${cnt(s19)} / ${CONFIG.sheets.k19base} ${cnt(sb19)} / ${CONFIG.sheets.k20} ${cnt(s20)} / ${CONFIG.sheets.k20base} ${cnt(sb20)} / ${CONFIG.sheets.subs} ${rSubs?rSubs.length-1+'件':'見つからず'}`;
+  const loaded=`${CONFIG.sheets.k19} ${cnt(s19)} / ${CONFIG.sheets.k19base} ${cnt(sb19)} / ${CONFIG.sheets.a19} ${cnt(ra19&&a19)} / ${CONFIG.sheets.k20} ${cnt(s20)} / ${CONFIG.sheets.k20base} ${cnt(sb20)} / ${CONFIG.sheets.a20} ${cnt(ra20&&a20)} / ${CONFIG.sheets.subs} ${rSubs?rSubs.length-1+'件':'見つからず'}`;
   const warn=(!sb19||!sb20)?`【注意】${!sb19?CONFIG.sheets.k19base:''}${!sb19&&!sb20?'・':''}${!sb20?CONFIG.sheets.k20base:''} シートを取得できないため KVK19/KVK20 シートの戦力を使用中。シート名と共有設定を確認してください。`:'';
   const daily={}; rDaily.forEach((r,i)=>{ const s=statsFromRows(r,dates[i],false); if(s&&Object.keys(s).length) daily[dates[i]]=s; });
   if(!Object.keys(daily).length){ const s=statsFromRows(await fetchRows(CONFIG.sheets.now,true),CONFIG.sheets.now,true); daily[dates[dates.length-1]]=s; }
   const subs={}; if(rSubs) for(const r of rSubs.slice(1)){ const id=normId(r[0]); if(id) subs[id]={name:(r[1]||'').trim(),mainId:normId(r[2]),mainName:(r[3]||'').trim()}; }
   const ds=Object.keys(daily).sort(), now=daily[ds[ds.length-1]], snaps={k19,k20,now};
   const ids=new Set(); Object.values(snaps).forEach(d=>Object.keys(d).forEach(id=>ids.add(id))); ds.forEach(dt=>Object.keys(daily[dt]).forEach(id=>ids.add(id)));
+  [a19,a20].forEach(d=>Object.keys(d).forEach(id=>ids.add(id)));
   const accounts=[];
   for(const id of ids){
-    const src=now[id]||k20[id]||k19[id]||daily[ds.find(dt=>daily[dt][id])][id];
+    const src=now[id]||k20[id]||k19[id]||a20[id]||a19[id]||daily[ds.find(dt=>daily[dt][id])]?.[id];
     const acc={id,name:src.name,type:subs[id]?'sub':'main'};
+    if(a19[id]) acc.a19={p:a19[id].p,max:a19[id].max}; if(a20[id]) acc.a20={p:a20[id].p,max:a20[id].max};
     if(subs[id]){ acc.mainId=subs[id].mainId; acc.mainName=subs[id].mainName; }
     for(const k in snaps) if(snaps[k][id]) acc[k]=snaps[k][id];
     acc.h={}; for(const dt of ds) if(daily[dt][id]) acc.h[dt]=daily[dt][id].p;
@@ -358,13 +362,16 @@ $('#btnCsv').addEventListener('click',()=>{ const col=COLS.find(c=>c.key===sortK
 
 // ---------- 王国全体 ----------
 function renderKingdom(){
-  const N=300, snaps=['k19','k20','now'], L={k19:'KVK19',k20:'KVK20',now:'現在'};
-  const pw=k=>DATA.accounts.filter(a=>a[k]).map(a=>a[k].p).sort((x,y)=>y-x);
-  const P={}; snaps.forEach(k=>P[k]=pw(k));
+  const N=300;
+  const L={k19:'KVK19base',a19:'AfterKVK19',k20:'KVK20base',a20:'AfterKVK20',now:'現在'};
+  const SUB={k19:'マッチング時',a19:'KVK後',k20:'マッチング時',a20:'KVK後',now:DATA.snapshots[2].period};
+  const snaps=['k19','a19','k20','a20','now'].filter(k=>DATA.accounts.some(a=>a[k]));
+  const P={}; snaps.forEach(k=>P[k]=DATA.accounts.filter(a=>a[k]).map(a=>a[k].p).sort((x,y)=>y-x));
   const total=k=>P[k].reduce((s,v)=>s+v,0), top=k=>P[k].slice(0,N).reduce((s,v)=>s+v,0), cnt=k=>P[k].length, nth=k=>P[k][N-1]??null;
+  const cmp=snaps.filter(k=>k!=='now');
   const dcell=(v,short=true)=>`<td class="num delta ${v<0?'down':v>0?'up':'flat'}" title="${fmtD(v)}">${short?fmtSD(v):fmtD(v)}</td>`;
-  const row=(label,f,short=true)=>`<tr><th>${label}</th>${snaps.map(k=>`<td class="num" title="${fmt(f(k))}">${short?fmtS(f(k)):fmt(f(k))}</td>`).join('')}${dcell(f('now')-f('k19'),short)}${dcell(f('now')-f('k20'),short)}</tr>`;
-  $('#kingdom').innerHTML=`<thead><tr class="col"><th></th>${snaps.map(k=>`<th class="num">${L[k]}</th>`).join('')}<th class="num gl">現在−KVK19</th><th class="num">現在−KVK20</th></tr></thead><tbody>`+
+  const row=(label,f,short=true)=>`<tr><th>${label}</th>${snaps.map(k=>`<td class="num ${k==='now'?'gl':''}" title="${fmt(f(k))}">${k==='now'?'<b>':''}${short?fmtS(f(k)):fmt(f(k))}${k==='now'?'</b>':''}</td>`).join('')}${cmp.map((k,i)=>dcell(f('now')-f(k),short).replace('<td class="','<td class="'+(i===0?'gl ':''))).join('')}</tr>`;
+  $('#kingdom').innerHTML=`<thead><tr class="col"><th></th>${snaps.map(k=>`<th class="num ${k==='now'?'gl':''}">${L[k]}<br><span style="font-weight:400">${SUB[k]}</span></th>`).join('')}${cmp.map((k,i)=>`<th class="num ${i===0?'gl':''}">現在−${L[k]}</th>`).join('')}</tr></thead><tbody>`+
     row('総戦力',total)+row(`TOP${N} 戦力`,top)+row(`${N}位の戦力`,nth)+row('アカウント数',cnt,false)+'</tbody>';
 }
 
@@ -382,7 +389,7 @@ async function start(){
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
   if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:8px 0 0'; w.textContent=DATA.warn; st.before(w); }
-  st.textContent=`ページ版: base対応 v3　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（KVK終了直後）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  st.textContent=`ページ版: AfterKVK対応 v4　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（マッチング時）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
