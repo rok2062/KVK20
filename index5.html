@@ -149,7 +149,7 @@ const CONFIG = {
       <div class="field"><label>最低戦力の時点</label><div class="seg" id="fLow"><button aria-pressed="true" data-v="all">全て</button><button aria-pressed="false" data-v="now">現在</button><button aria-pressed="false" data-v="k20">KVK20</button><button aria-pressed="false" data-v="k19">KVK19</button></div></div>
       <label class="check"><input type="checkbox" id="fScope" checked>KVK19かKVK20に存在するアカウントのみ</label>
       <label class="check"><input type="checkbox" id="fShowNowAbsent" checked>現在不在も表示</label>
-      <label class="check" id="dailyToggle" hidden><input type="checkbox" id="fDaily">日別列を表示</label>
+      <label class="check" id="dailyToggle" hidden><input type="checkbox" id="fDaily" checked>日別列を表示</label>
       <div class="actions"><button class="btn" id="btnReset">フィルター解除</button><button class="btn" id="btnCsv">CSV</button></div>
     </div>
     <div class="summary" id="summary"></div>
@@ -186,11 +186,11 @@ function parseCSV(text){
   return rows;
 }
 async function fetchRows(name, required){
-  // _=時刻 でキャッシュ回避（ブラウザ／中継のキャッシュで古いCSVが返るのを防ぐ）
-  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+  // _=時刻 でキャッシュ回避（ブラウザ／中継のキャッシュで古いCSVが返るのを防ぐ）。name が空なら先頭シート
+  const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1${name?`&sheet=${encodeURIComponent(name)}`:''}&_=${Date.now()}`;
   let res; try{ res=await fetch(url,{cache:'no-store'}); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
   if(!res.ok){ if(required) throw new Error(`${name} シートを取得できません (${res.status})`); return null; }
-  const rows=parseCSV(await res.text()); return rows.length?rows:null;
+  const text=await res.text(); const rows=parseCSV(text); if(!rows.length) return null; rows.text=text; return rows;
 }
 const num=v=>{const n=parseFloat(String(v??'').replace(/[,\s]/g,''));return isNaN(n)?0:Math.round(n);};
 function statsFromRows(rows, name, required){
@@ -224,7 +224,12 @@ function dateRange(){
 async function loadFromSheet(){
   const st=$('#status'); st.textContent='スプレッドシートを読み込み中…';
   const dates=dateRange();
-  const [r19,r20,b19,b20,ra19,ra20,rSubs,...rDaily]=await Promise.all([fetchRows(CONFIG.sheets.k19,true),fetchRows(CONFIG.sheets.k20,true),fetchRows(CONFIG.sheets.k19base,false),fetchRows(CONFIG.sheets.k20base,false),fetchRows(CONFIG.sheets.a19,false),fetchRows(CONFIG.sheets.a20,false),fetchRows(CONFIG.sheets.subs,false),...dates.map(d=>fetchRows(d,false))]);
+  let [rFirst,r19,r20,b19,b20,ra19,ra20,rSubs,...rDaily]=await Promise.all([fetchRows(null,false),fetchRows(CONFIG.sheets.k19,true),fetchRows(CONFIG.sheets.k20,true),fetchRows(CONFIG.sheets.k19base,false),fetchRows(CONFIG.sheets.k20base,false),fetchRows(CONFIG.sheets.a19,false),fetchRows(CONFIG.sheets.a20,false),fetchRows(CONFIG.sheets.subs,false),...dates.map(d=>fetchRows(d,false))]);
+  // 存在しないシート名を指定すると Google は先頭シートの内容を返してしまうので、先頭シートと同一内容のものは「無い」扱いにする。
+  // 日付シートは先頭シートそのものである可能性があるため、同一内容のうち最も古い日付だけ残す。
+  const same=r=>!!(r&&rFirst&&r.text===rFirst.text);
+  if(same(b19)) b19=null; if(same(b20)) b20=null; if(same(ra19)) ra19=null; if(same(ra20)) ra20=null; if(same(rSubs)) rSubs=null;
+  { let kept=false; rDaily=rDaily.map(r=>{ if(!same(r)) return r; if(kept) return null; kept=true; return r; }); }
   const a19=statsFromRows(ra19,CONFIG.sheets.a19,false)||{}, a20=statsFromRows(ra20,CONFIG.sheets.a20,false)||{};
   const s19=statsFromRows(r19,CONFIG.sheets.k19,true), s20=statsFromRows(r20,CONFIG.sheets.k20,true);
   const sb19=statsFromRows(b19,CONFIG.sheets.k19base,false), sb20=statsFromRows(b20,CONFIG.sheets.k20base,false);
@@ -233,7 +238,7 @@ async function loadFromSheet(){
   const loaded=`${CONFIG.sheets.k19} ${cnt(s19)} / ${CONFIG.sheets.k19base} ${cnt(sb19)} / ${CONFIG.sheets.a19} ${cnt(ra19&&a19)} / ${CONFIG.sheets.k20} ${cnt(s20)} / ${CONFIG.sheets.k20base} ${cnt(sb20)} / ${CONFIG.sheets.a20} ${cnt(ra20&&a20)} / ${CONFIG.sheets.subs} ${rSubs?rSubs.length-1+'件':'見つからず'}`;
   const warn=(!sb19||!sb20)?`【注意】${!sb19?CONFIG.sheets.k19base:''}${!sb19&&!sb20?'・':''}${!sb20?CONFIG.sheets.k20base:''} シートを取得できないため KVK19/KVK20 シートの戦力を使用中。シート名と共有設定を確認してください。`:'';
   const daily={}; rDaily.forEach((r,i)=>{ const s=statsFromRows(r,dates[i],false); if(s&&Object.keys(s).length) daily[dates[i]]=s; });
-  if(!Object.keys(daily).length){ const s=statsFromRows(await fetchRows(CONFIG.sheets.now,true),CONFIG.sheets.now,true); daily[dates[dates.length-1]]=s; }
+  if(!Object.keys(daily).length){ const rn=await fetchRows(CONFIG.sheets.now,true); const s=statsFromRows(rn,CONFIG.sheets.now,true); daily[dates[dates.length-1]]=s; }
   const subs={}; if(rSubs) for(const r of rSubs.slice(1)){ const id=normId(r[0]); if(id) subs[id]={name:(r[1]||'').trim(),mainId:normId(r[2]),mainName:(r[3]||'').trim()}; }
   const ds=Object.keys(daily).sort(), now=daily[ds[ds.length-1]], snaps={k19,k20,now};
   const ids=new Set(); Object.values(snaps).forEach(d=>Object.keys(d).forEach(id=>ids.add(id))); ds.forEach(dt=>Object.keys(daily[dt]).forEach(id=>ids.add(id)));
@@ -297,12 +302,18 @@ function buildColumns(){
   ];
   const dates=DATA.dates||[];
   if(dates.length>1&&$('#fDaily').checked){
-    dates.forEach((dt,i)=>{ const prev=dates[i-1];
-      cols.push({key:'h'+dt,group:'日別',label:fmtDate(dt).slice(5),cls:i===0?'gl':'',cell:a=>{ const h=a.h||{}; if(h[dt]==null) return `<td class="num absent-cell ${i===0?'gl':''}">不在</td>`;
-        let cls='flat'; if(prev&&h[prev]!=null){ const d=h[dt]-h[prev]; cls=Math.abs(d)<=tol()?'flat':(d<0?'down':'up'); }
-        return `<td class="num delta ${cls} ${i===0?'gl':''}" title="${prev&&h[prev]!=null?'前日比 '+fmtD(h[dt]-h[prev]):''}">${fmt(h[dt])}</td>`; },sort:a=>(a.h||{})[dt]??null,csv:a=>(a.h||{})[dt]??'不在'}); });
     const f=dates[0], l=dates[dates.length-1];
-    cols.push({key:'hsum',group:'日別',label:'累計',cell:a=>{const h=a.h||{};return deltaCell(h[f]!=null&&h[l]!=null?h[l]-h[f]:null);},sort:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:null;},sum:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:undefined;},csv:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:'';}});
+    dates.slice(1).forEach((dt,j)=>{ const prev=dates[j];
+      cols.push({key:'h'+dt,group:'日別（前日比）',label:fmtDate(dt).slice(5),cls:j===0?'gl':'',
+        cell:a=>{ const h=a.h||{}; const g=j===0?'gl ':'';
+          if(h[dt]==null) return `<td class="${g}num absent-cell">不在</td>`;
+          if(h[prev]==null) return `<td class="${g}num delta flat" title="${fmtDate(dt)} ${fmt(h[dt])}（前日 不在）">—</td>`;
+          const d=h[dt]-h[prev], cls=Math.abs(d)<=tol()?'flat':(d<0?'down':'up');
+          return `<td class="${g}num delta ${cls}" title="${fmtDate(dt)} ${fmt(h[dt])} − ${fmtDate(prev)} ${fmt(h[prev])} = ${fmtD(d)}">${fmtSD(d)}</td>`; },
+        sort:a=>{const h=a.h||{};return (h[dt]!=null&&h[prev]!=null)?h[dt]-h[prev]:null;},
+        sum:a=>{const h=a.h||{};return (h[dt]!=null&&h[prev]!=null)?h[dt]-h[prev]:undefined;},
+        csv:a=>{const h=a.h||{};return (h[dt]!=null&&h[prev]!=null)?h[dt]-h[prev]:(h[dt]==null?'不在':'');}}); });
+    cols.push({key:'hsum',group:'日別（前日比）',label:`累計 ${fmtDate(f).slice(5)}→${fmtDate(l).slice(5)}`,cell:a=>{const h=a.h||{};return deltaCell(h[f]!=null&&h[l]!=null?h[l]-h[f]:null,null,h[f]!=null&&h[l]!=null?`${fmtDate(l)} ${fmt(h[l])} − ${fmtDate(f)} ${fmt(h[f])} = ${fmtD(h[l]-h[f])}`:'');},sort:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:null;},sum:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:undefined;},csv:a=>{const h=a.h||{};return h[f]!=null&&h[l]!=null?h[l]-h[f]:'';}});
   }
   return cols;
 }
@@ -324,7 +335,7 @@ function renderTable(){
   const body=rows.length?'<tbody>'+rows.map(a=>'<tr>'+COLS.map(c=>c.cell(a)).join('')+'</tr>').join('')+'</tbody>':`<tbody><tr><td colspan="${COLS.length}" class="empty">該当なし</td></tr></tbody>`;
   // 合計
   const foot='<tfoot><tr>'+COLS.map((c,i)=>{ if(i===0) return `<td>合計 ${fmt(rows.length)} 件</td>`; if(!c.sum) return `<td class="${c.cls||''}"></td>`;
-    let s=0,n=0; rows.forEach(a=>{const v=c.sum(a); if(v!=null){s+=v;n++;}}); const isD=/_dp$|_dm$|hsum/.test(c.key);
+    let s=0,n=0; rows.forEach(a=>{const v=c.sum(a); if(v!=null){s+=v;n++;}}); const isD=/_dp$|_dm$|hsum|^h\d{8}$/.test(c.key);
     const short=c.key!=='now_p'; return `<td class="num ${c.cls||''} ${isD?'delta '+(s<0?'down':s>0?'up':'flat'):''}" title="${n}件の合計: ${isD?fmtD(s):fmt(s)}">${isD?(short?fmtSD(s):fmtD(s)):(short?fmtS(s):fmt(s))}</td>`; }).join('')+'</tr></tfoot>';
   table.innerHTML='<thead>'+grpRow+colRow+'</thead>'+body+foot;
 }
@@ -389,7 +400,7 @@ async function start(){
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
   if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:8px 0 0'; w.textContent=DATA.warn; st.before(w); }
-  st.textContent=`ページ版: AfterKVK対応 v4　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（マッチング時）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  st.textContent=`ページ版: v5　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（マッチング時）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
