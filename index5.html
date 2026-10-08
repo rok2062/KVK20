@@ -186,6 +186,16 @@ function parseCSV(text){
   return rows;
 }
 async function fetchRows(name, required){
+  // 一時的な失敗（編集中・通信エラー）で黙って別シートの値に落ちないよう、最大3回取り直す
+  let last=null;
+  for(let i=0;i<3;i++){
+    try{ const r=await fetchRowsOnce(name, required); if(r&&r.length>1) return r; last=r; }
+    catch(e){ if(i===2) throw e; }
+    await new Promise(r=>setTimeout(r,600*(i+1)));
+  }
+  return last;
+}
+async function fetchRowsOnce(name, required){
   // _=時刻 でキャッシュ回避（ブラウザ／中継のキャッシュで古いCSVが返るのを防ぐ）。name が空なら先頭シート
   const url=`https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&headers=1${name?`&sheet=${encodeURIComponent(name)}`:''}&_=${Date.now()}`;
   let res; try{ res=await fetch(url,{cache:'no-store'}); }catch(e){ if(required) throw new Error(`${name} シートを取得できません (${e.message})`); return null; }
@@ -236,7 +246,7 @@ async function loadFromSheet(){
   const k19=mergeBase(s19,sb19), k20=mergeBase(s20,sb20);
   const cnt=o=>o?Object.keys(o).length+'件':'見つからず';
   const loaded=`${CONFIG.sheets.k19} ${cnt(s19)} / ${CONFIG.sheets.k19base} ${cnt(sb19)} / ${CONFIG.sheets.a19} ${cnt(ra19&&a19)} / ${CONFIG.sheets.k20} ${cnt(s20)} / ${CONFIG.sheets.k20base} ${cnt(sb20)} / ${CONFIG.sheets.a20} ${cnt(ra20&&a20)} / ${CONFIG.sheets.subs} ${rSubs?rSubs.length-1+'件':'見つからず'}`;
-  const warn=(!sb19||!sb20)?`【注意】${!sb19?CONFIG.sheets.k19base:''}${!sb19&&!sb20?'・':''}${!sb20?CONFIG.sheets.k20base:''} シートを取得できないため KVK19/KVK20 シートの戦力を使用中。シート名と共有設定を確認してください。`:'';
+  const warn=(!sb19||!sb20)?`【注意】${!sb19?CONFIG.sheets.k19base:''}${!sb19&&!sb20?'・':''}${!sb20?CONFIG.sheets.k20base:''} シートを取得できなかったため、KVK19/KVK20 シートの戦力で代用しています（王国全体の「マッチング」列・個別の差分とも）。シート編集中や一時的な通信エラーの可能性があるので、再読み込みしてください。`:'';
   const daily={}; rDaily.forEach((r,i)=>{ const s=statsFromRows(r,dates[i],false); if(s&&Object.keys(s).length) daily[dates[i]]=s; });
   if(!Object.keys(daily).length){ const rn=await fetchRows(CONFIG.sheets.now,true); const s=statsFromRows(rn,CONFIG.sheets.now,true); daily[dates[dates.length-1]]=s; }
   const subs={}; if(rSubs) for(const r of rSubs.slice(1)){ const id=normId(r[0]); if(id) subs[id]={name:(r[1]||'').trim(),mainId:normId(r[2]),mainName:(r[3]||'').trim()}; }
@@ -399,8 +409,8 @@ async function start(){
     else if(window.KVK_DATA){ DATA=window.KVK_DATA; DATA.source=`data.js（生成 ${DATA.generated||'-'}）`; }
     else throw new Error('data.js が見つかりません（build_data.py --book スプシ.xlsx で生成して index.html と同じ場所に置く）');
   }catch(err){ st.textContent='読み込みエラー: '+err.message; st.classList.add('err'); return; }
-  if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:8px 0 0'; w.textContent=DATA.warn; st.before(w); }
-  st.textContent=`ページ版: v5　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（マッチング時）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
+  if(DATA.warn){ const w=document.createElement('p'); w.id='warn'; w.style.cssText='color:var(--down);font-weight:700;margin:0 0 12px;padding:10px 14px;border:1px solid var(--down);border-radius:6px'; w.innerHTML=DATA.warn+' <button class="btn" style="margin-left:10px" onclick="location.reload()">再読み込み</button>'; document.querySelector('main').prepend(w); }
+  st.textContent=`ページ版: v6　｜　取得 ${new Date().toLocaleString('ja-JP')}　｜　データ: ${DATA.source}　｜　サブ登録 ${fmt(DATA.subCount||0)} 件　｜　列見出しクリックでソート、既定は現在戦力の降順。KVK19/20 の戦力は KVK19base / KVK20base シート（マッチング時）、撃破pt・戦死は KVK19 / KVK20 シート（期間統計）。「KVK19→現在」は 現在戦力 − KVK19時の戦力（1.23億 / 8,000万 表記、マウスで実数）。判定もこの差分で、±許容幅以内なら「変化なし」。「最低」は KVK19戦力 / KVK20戦力 / 現在戦力 のうち一番低い時点（現在以外なら横に 現在−最低 を表示）。撃破pt 0 は赤字。`;
   $('#periods').innerHTML=DATA.snapshots.map(s=>`<div class="period"><b>${s.label}</b><em>${s.period}</em><span>${fmt(DATA.accounts.filter(a=>a[s.key]).length)} アカウント</span></div>`).join('');
   $('#fTol').value=CONFIG.defaultTolerance;
   if((DATA.dates||[]).length>1){ $('#dailyToggle').hidden=false; }
